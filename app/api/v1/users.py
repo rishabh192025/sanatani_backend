@@ -15,7 +15,7 @@ router = APIRouter()
 async def create_new_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_async_db),
-    # current_admin: User = Depends(get_current_active_admin) # Optional: only admins can create users
+    current_admin: User = Depends(get_current_active_admin) # Optional: only admins can create users
 ):
     """
     Create a new user.
