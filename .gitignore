@@ -1,0 +1,20 @@
+**/__pycache__/
+*.py[cod]
+app/.env
+# Ignore Python bytecode files
+# Ignore virtual environment directories
+venv/
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+# Ignore logs
+logs/
+# Ignore coverage reports
+coverage.xml
+# Ignore test output
+test_output/
+# Ignore build directories
+build/
+# Ignore distribution packages
+dist/
+# Ignore IDE specific files
+.idea/
