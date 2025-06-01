@@ -9,6 +9,7 @@ from app.crud.base import CRUDBase
 from app.models.content import Content, ContentType as ContentTypeEnum, LanguageCode as LanguageCodeEnum
 from app.schemas.content import ContentCreate, ContentUpdate
 from app.utils.helpers import generate_slug # Assuming a helper for slug
+from sqlalchemy.orm import selectinload
 
 class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
 
@@ -16,10 +17,10 @@ class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
         return await super().get(db, id=content_id)
 
     async def create_content(self, db: AsyncSession, *, obj_in: ContentCreate, author_id: PyUUID) -> Content:
-        # Use a robust slug generation utility
         slug = await generate_slug(db, self.model, obj_in.title)
 
-        content_data = obj_in.model_dump(exclude={"category_id"}) # Exclude if handled separately
+        # content_body is no longer part of ContentCreate directly
+        content_data = obj_in.model_dump(exclude={"category_id"}) 
         
         db_obj = Content(
             **content_data,
@@ -96,6 +97,23 @@ class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
 
     async def get_content_by_slug(self, db: AsyncSession, slug: str) -> Optional[Content]:
         result = await db.execute(select(Content).filter(Content.slug == slug))
+        return result.scalar_one_or_none()
+
+    async def get_content_with_chapters(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
+        result = await db.execute(
+            select(self.model)
+            .options(selectinload(self.model.chapters)) # Eager load chapters
+            .filter(self.model.id == content_id)
+        )
+        return result.scalar_one_or_none()
+    
+    async def get_content_by_slug_with_chapters(self, db: AsyncSession, slug: str) -> Optional[Content]:
+        
+        result = await db.execute(
+            select(self.model)
+            .options(selectinload(self.model.chapters))
+            .filter(self.model.slug == slug)
+        )
         return result.scalar_one_or_none()
 
 content_crud = CRUDContent(Content)

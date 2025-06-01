@@ -1,16 +1,20 @@
 # app/api/v1/content.py
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
-from sqlalchemy.ext.asyncio import AsyncSession # Changed
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID as PyUUID
 
-from app.database import get_async_db # Changed
+from app.database import get_async_db
 from app.schemas.content import ContentCreate, ContentResponse, ContentUpdate
+from app.schemas.content_chapter import ( # Import chapter schemas
+    ContentChapterCreate, ContentChapterResponse, ContentChapterUpdate
+)
 from app.crud.content import content_crud
+from app.crud.content_chapter import content_chapter_crud # Import chapter CRUD
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
-from app.models.content import Content # For type hinting
-from app.services.file_service import file_service # Placeholder
+from app.models.content import Content, ContentStatus # For type hinting
+from app.services.file_service import file_service
 
 router = APIRouter()
 
@@ -34,13 +38,13 @@ async def get_all_content( # Renamed for clarity
     # Current implementation of get_content_list allows filtering by status.
     contents = await content_crud.get_content_list(
         db=db, 
-        skip=skip, 
-        limit=limit,
-        content_type_str=content_type,
-        category_id_str=category_id,
-        language_str=language,
-        status_str=status_filter or "PUBLISHED", # Default to published for public view
-        search_query=search
+        skip=Query(0, ge=0), # Default values here or from parameters
+        limit=Query(10, ge=1, le=100),
+        content_type_str=Query(None),
+        category_id_str=Query(None),
+        language_str=Query(None),
+        status_str=Query(None) or ContentStatus.PUBLISHED.value,
+        search_query=Query(None)
     )
     return contents
 
@@ -172,3 +176,136 @@ async def upload_content_main_file( # Renamed for clarity
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
 
 # Add similar endpoints for cover_image_url and thumbnail_url if direct upload is desired for them too.
+
+@router.post("/{content_id}/chapters/", response_model=ContentChapterResponse, status_code=status.HTTP_201_CREATED)
+async def create_chapter_for_content(
+    content_id: PyUUID,
+    chapter_in: ContentChapterCreate,
+    current_user: User = Depends(get_current_user), # Granular check
+    db: AsyncSession = Depends(get_async_db)
+):
+    content_item = await content_crud.get_content(db, content_id=content_id)
+    if not content_item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent content not found")
+
+    # Permission check: Admin, Moderator, or Author of the parent content
+    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
+    is_author = content_item.author_id == current_user.id
+    if not (is_admin_or_moderator or is_author):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to add chapters to this content")
+
+    try:
+        chapter = await content_chapter_crud.create_with_content_id(
+            db=db, obj_in=chapter_in, content_id=content_id
+        )
+    except ValueError as e: # Catch duplicate chapter number error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return chapter
+
+@router.get("/{content_id}/chapters/", response_model=List[ContentChapterResponse])
+async def list_chapters_for_content(
+    content_id: PyUUID,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500), # Increased limit for chapters
+    db: AsyncSession = Depends(get_async_db)
+):
+    content_item = await content_crud.get_content(db, content_id=content_id)
+    if not content_item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent content not found")
+    
+    # Add access control for chapters if needed (e.g., based on content status or user subscription)
+    chapters = await content_chapter_crud.get_chapters_by_content_id(
+        db=db, content_id=content_id, skip=skip, limit=limit
+    )
+    return chapters
+
+@router.get("/{content_id}/chapters/{chapter_id}", response_model=ContentChapterResponse)
+async def get_specific_chapter(
+    content_id: PyUUID, # Used to verify chapter belongs to content, optional
+    chapter_id: PyUUID,
+    db: AsyncSession = Depends(get_async_db)
+):
+    chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
+    if not chapter or chapter.content_id != content_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to specified content")
+    # Add access control
+    return chapter
+
+@router.put("/{content_id}/chapters/{chapter_id}", response_model=ContentChapterResponse)
+async def update_specific_chapter(
+    content_id: PyUUID,
+    chapter_id: PyUUID,
+    chapter_in: ContentChapterUpdate,
+    current_user: User = Depends(get_current_user), # Granular check
+    db: AsyncSession = Depends(get_async_db)
+):
+    db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
+    if not db_chapter or db_chapter.content_id != content_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+
+    content_item = await content_crud.get_content(db, content_id=db_chapter.content_id) # Get parent
+    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
+    is_author = content_item and content_item.author_id == current_user.id
+    if not (is_admin_or_moderator or is_author):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to update this chapter")
+
+    # Check for chapter number change and potential collision
+    if chapter_in.chapter_number is not None and chapter_in.chapter_number != db_chapter.chapter_number:
+        existing_chapter_with_new_number = await content_chapter_crud.get_by_content_and_chapter_number(
+            db, content_id=content_id, chapter_number=chapter_in.chapter_number
+        )
+        if existing_chapter_with_new_number:
+            raise HTTPException(status_code=400, detail=f"Chapter number {chapter_in.chapter_number} already exists for this content.")
+
+    updated_chapter = await content_chapter_crud.update(db=db, db_obj=db_chapter, obj_in=chapter_in)
+    return updated_chapter
+
+@router.delete("/{content_id}/chapters/{chapter_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_specific_chapter(
+    content_id: PyUUID,
+    chapter_id: PyUUID,
+    current_user: User = Depends(get_current_user), # Granular check
+    db: AsyncSession = Depends(get_async_db)
+):
+    db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
+    if not db_chapter or db_chapter.content_id != content_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
+
+    content_item = await content_crud.get_content(db, content_id=db_chapter.content_id) # Get parent
+    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
+    is_author = content_item and content_item.author_id == current_user.id
+    if not (is_admin_or_moderator or is_author):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this chapter")
+    
+    await content_chapter_crud.remove(db=db, id=chapter_id)
+    return
+
+# --- File Upload Endpoint for Content (main file, not chapter specific audio/video) ---
+@router.post("/{content_id}/upload-main-file", summary="Upload a primary file for content (e.g., PDF, MP3 for whole book/album)")
+async def upload_content_main_file(
+    content_id: PyUUID,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    db_content = await content_crud.get_content(db, content_id=content_id)
+    if not db_content:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
+
+    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
+    is_author = db_content.author_id == current_user.id
+    if not (is_admin_or_moderator or is_author):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+    
+    try:
+        # This updates content_obj.file_url and file_size
+        file_url, file_size = await file_service.upload_content_file(
+            db=db, content_obj=db_content, file=file, upload_dir_prefix="content_main_files"
+        )
+        return {"message": "Main content file uploaded successfully", "file_url": file_url, "file_size_bytes": file_size}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
+
+# You would need similar upload endpoints for chapter-specific audio/video if ContentChapter.audio_url etc.
+# are to be populated via direct uploads rather than just string URLs.
+# E.g., POST /{content_id}/chapters/{chapter_id}/upload-audio

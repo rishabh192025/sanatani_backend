@@ -39,7 +39,6 @@ class Content(Base):
     slug = Column(String(350), unique=True, nullable=False, index=True)
     subtitle = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
-    content_body = Column(Text, nullable=True)
     
     content_type = Column(SQLAlchemyEnum(ContentType), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
@@ -80,7 +79,7 @@ class Content(Base):
     # Relationships
     author = relationship("User", backref="created_content") # Simpler backref
     category = relationship("Category", backref="content_items") # Ensure Category model exists
-    chapters = relationship("ContentChapter", back_populates="content") # Add when ContentChapter exists
+    chapters = relationship("ContentChapter", back_populates="content", cascade="all, delete-orphan", order_by="ContentChapter.chapter_number")
     # reviews = relationship("ContentReview", back_populates="content")
     # user_progress = relationship("UserProgress", back_populates="content")
     translations = relationship("ContentTranslation", back_populates="original_content")
@@ -91,33 +90,31 @@ class Content(Base):
 
 
 class ContentChapter(Base):
-    __tablename__ = "content_chapter"
+    __tablename__ = "content_chapters"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     content_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
     title = Column(String(300), nullable=False)
     chapter_number = Column(Integer, nullable=False)
-    content_body = Column(Text, nullable=True)
-    
-    # For Audio Chapters
+    content_body = Column(Text, nullable=True) # For text-based chapters (books, articles)
     audio_url = Column(String(500), nullable=True)
-    duration = Column(Integer, nullable=True)  # seconds
-    transcript = Column(Text, nullable=True)
-    
-    # Chapter specific metadata
+    video_url = Column(String(500), nullable=True) # Added video_url if distinct from audio
+    duration = Column(Integer, nullable=True)  # Duration of this chapter in seconds
+    transcript = Column(Text, nullable=True)    # Transcript for audio/video
     summary = Column(Text, nullable=True)
-    key_points = Column(JSON, nullable=True)
-    
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+    key_points = Column(JSON, nullable=True) # Array of key points or takeaways
+    is_preview_allowed = Column(Boolean, default=False) # Can this chapter be previewed for free?
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     content = relationship("Content", back_populates="chapters")
     
     __table_args__ = (
-        UniqueConstraint('content_id', 'chapter_number', name='unique_chapter_per_content'),
-        Index('idx_content_chapter', 'content_id', 'chapter_number'),
-        {'extend_existing': True}
+        UniqueConstraint('content_id', 'chapter_number', name='uq_content_chapter_number'),
+        Index('idx_content_chapter_content_id_chapter_number', 'content_id', 'chapter_number'),
     )
+
+    def __repr__(self):
+        return f"<ContentChapter(id={self.id}, title='{self.title}', chapter_no={self.chapter_number})>"
 
 class ContentTranslation(Base):
     __tablename__ = "content_translation"

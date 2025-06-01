@@ -2,32 +2,34 @@
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, List
 from datetime import datetime
-from uuid import UUID # Import UUID
-from app.models.content import ContentType, ContentStatus, LanguageCode # Use Python Enums for schema
+from uuid import UUID
+from app.models.content import ContentType, ContentStatus, LanguageCode
+from app.schemas.content_chapter import ContentChapterResponse # Import chapter schema
 
 class ContentBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=300)
     subtitle: Optional[str] = Field(None, max_length=500)
     description: Optional[str] = None
-    content_type: ContentType # Use the Python Enum
-    language: LanguageCode = LanguageCode.EN # Use the Python Enum
+    content_type: ContentType
+    language: LanguageCode = LanguageCode.EN
     tags: Optional[List[str]] = Field(None, max_items=20)
     cover_image_url: Optional[HttpUrl] = None
     thumbnail_url: Optional[HttpUrl] = None
+    # file_url for main downloadable if applicable (e.g., full e-book, zip of audio)
+    file_url: Optional[HttpUrl] = None 
 
 class ContentCreate(ContentBase):
     category_id: Optional[str] = None # Assuming category ID is passed as string UUID
-    content_body: Optional[str] = None
+    # content_body REMOVED - this will be handled via chapters
     premium_content: bool = False
-    # author_name can be set if author_id is not a platform user
     author_name: Optional[str] = Field(None, max_length=200) 
-    status: ContentStatus = ContentStatus.DRAFT # Default status on creation
+    status: ContentStatus = ContentStatus.DRAFT
 
 class ContentUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=300)
     subtitle: Optional[str] = Field(None, max_length=500)
     description: Optional[str] = None
-    content_body: Optional[str] = None
+    # content_body REMOVED
     content_type: Optional[ContentType] = None
     category_id: Optional[str] = None
     language: Optional[LanguageCode] = None
@@ -37,17 +39,16 @@ class ContentUpdate(BaseModel):
     premium_content: Optional[bool] = None
     cover_image_url: Optional[HttpUrl] = None
     thumbnail_url: Optional[HttpUrl] = None
+    file_url: Optional[HttpUrl] = None
     author_name: Optional[str] = Field(None, max_length=200)
 
-
 class ContentResponse(ContentBase):
-    id: UUID # Use UUID type
+    id: UUID
     slug: str
     author_id: Optional[UUID] = None
-    author_name: Optional[str] = None # Display author_name if author_id is null or for external authors
+    author_name: Optional[str] = None
     category_id: Optional[UUID] = None
-    # category: Optional[CategoryResponse] = None # If you want to nest category info
-
+    
     status: ContentStatus
     published_at: Optional[datetime] = None
     featured: bool
@@ -59,9 +60,14 @@ class ContentResponse(ContentBase):
     average_rating: Optional[float] = None
     review_count: int
     
+    duration: Optional[int] = None # Overall duration (e.g., for audiobooks)
+    page_count: Optional[int] = None # Overall page count (e.g., for books)
+
+    # Optionally include chapters in the main content response
+    chapters: Optional[List[ContentChapterResponse]] = [] 
+    
     created_at: datetime
     updated_at: datetime
     
     class Config:
-        from_attributes = True # Correct for Pydantic v2
-        # orm_mode = True # Remove orm_mode
+        from_attributes = True
