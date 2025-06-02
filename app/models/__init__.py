@@ -4,6 +4,7 @@ from app.database import Base
 from .user import User, UserRole, LanguageCode
 from .category import Category
 from .content import Content, ContentType, ContentStatus, ContentChapter, ContentSection
+from .collection import Collection, CollectionItem
 # from .content import ContentChapter, ContentTranslation # Add when created
 # from .places import SacredPlace, PlaceType # Add when created
 # ... import other models as they are created

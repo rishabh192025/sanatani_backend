@@ -17,38 +17,33 @@ from app.crud.content import content_crud
 from app.crud.content_chapter import content_chapter_crud # Import chapter CRUD
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
-from app.models.content import Content, ContentStatus # For type hinting
+from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
 from app.services.file_service import file_service
 
 router = APIRouter()
 
-@router.get("", response_model=List[ContentResponse])
-async def get_all_content( # Renamed for clarity
+@router.get("", response_model=List[ContentResponse], summary="List all content (generic)")
+async def list_all_generic_content( # Renamed for clarity
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
     content_type: Optional[str] = Query(None, description="Filter by content type (e.g., BOOK, ARTICLE)"),
+    sub_type: Optional[str] = Query(None, description="Filter by sub-type (e.g., STORY, TEACHING)"),
     category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
-    db: AsyncSession = Depends(get_async_db) # Changed
+    db: AsyncSession = Depends(get_async_db)
 ):
-    """
-    Get a list of content items with optional filters and pagination.
-    Publicly accessible for published content.
-    """
-    # For public listing, you might want to default to only 'PUBLISHED' status
-    # or handle it based on user role if drafts are shown to admins.
-    # Current implementation of get_content_list allows filtering by status.
     contents = await content_crud.get_content_list(
         db=db, 
-        skip=Query(0, ge=0), # Default values here or from parameters
-        limit=Query(10, ge=1, le=100),
-        content_type_str=Query(None),
-        category_id_str=Query(None),
-        language_str=Query(None),
-        status_str=Query(None) or ContentStatus.PUBLISHED.value,
-        search_query=Query(None)
+        skip=skip, 
+        limit=limit,
+        content_type_str=content_type, # Pass the value
+        sub_type_str=sub_type,         # Pass the value
+        category_id_str=category_id,   # Pass the value
+        language_str=language,       # Pass the value
+        status_str=status_filter or ContentStatus.PUBLISHED.value, # Pass the value
+        search_query=search            # Pass the value
     )
     return contents
 
@@ -329,13 +324,10 @@ async def upload_content_main_file(
 # E.g., POST /{content_id}/chapters/{chapter_id}/upload-audio
 
 
-SECTION_TAG = "Content Sections" # For grouping in OpenAPI docs
-
 @router.post(
     "/{content_id}/chapters/{chapter_id}/sections/", 
     response_model=ContentSectionResponse, 
-    status_code=status.HTTP_201_CREATED,
-    tags=[SECTION_TAG]
+    status_code=status.HTTP_201_CREATED
 )
 async def create_section_for_chapter(
     content_id: PyUUID, # For verification
@@ -366,8 +358,7 @@ async def create_section_for_chapter(
 
 @router.get(
     "/{content_id}/chapters/{chapter_id}/sections/", 
-    response_model=List[ContentSectionResponse],
-    tags=[SECTION_TAG]
+    response_model=List[ContentSectionResponse]
 )
 async def list_sections_for_chapter(
     content_id: PyUUID, # For verification
@@ -387,8 +378,7 @@ async def list_sections_for_chapter(
 
 @router.get(
     "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    response_model=ContentSectionResponse,
-    tags=[SECTION_TAG]
+    response_model=ContentSectionResponse
 )
 async def get_specific_section(
     content_id: PyUUID, # For verification
@@ -409,8 +399,7 @@ async def get_specific_section(
 
 @router.put(
     "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    response_model=ContentSectionResponse,
-    tags=[SECTION_TAG]
+    response_model=ContentSectionResponse
 )
 async def update_specific_section(
     content_id: PyUUID, # For verification
@@ -445,8 +434,7 @@ async def update_specific_section(
 
 @router.delete(
     "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=[SECTION_TAG]
+    status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_specific_section(
     content_id: PyUUID, # For verification

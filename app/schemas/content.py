@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from app.models.content import ContentType, ContentStatus, LanguageCode
+from app.models.content import ContentType, ContentStatus, LanguageCode, ContentSubType # Import enums
 from app.schemas.content_chapter import ContentChapterResponse # Import chapter schema
 
 class ContentBase(BaseModel):
@@ -11,6 +11,7 @@ class ContentBase(BaseModel):
     subtitle: Optional[str] = Field(None, max_length=500)
     description: Optional[str] = None
     content_type: ContentType
+    sub_type: Optional[ContentSubType] = ContentSubType.GENERAL
     language: LanguageCode = LanguageCode.EN
     tags: Optional[List[str]] = Field(None, max_items=20)
     cover_image_url: Optional[HttpUrl] = None
@@ -20,7 +21,6 @@ class ContentBase(BaseModel):
 
 class ContentCreate(ContentBase):
     category_id: Optional[str] = None # Assuming category ID is passed as string UUID
-    # content_body REMOVED - this will be handled via chapters
     premium_content: bool = False
     author_name: Optional[str] = Field(None, max_length=200) 
     status: ContentStatus = ContentStatus.DRAFT
@@ -29,8 +29,8 @@ class ContentUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=300)
     subtitle: Optional[str] = Field(None, max_length=500)
     description: Optional[str] = None
-    # content_body REMOVED
     content_type: Optional[ContentType] = None
+    sub_type: Optional[ContentSubType] = None
     category_id: Optional[str] = None
     language: Optional[LanguageCode] = None
     tags: Optional[List[str]] = Field(None, max_items=20)
@@ -48,7 +48,7 @@ class ContentResponse(ContentBase):
     author_id: Optional[UUID] = None
     author_name: Optional[str] = None
     category_id: Optional[UUID] = None
-    
+    sub_type: Optional[ContentSubType]
     status: ContentStatus
     published_at: Optional[datetime] = None
     featured: bool

@@ -5,6 +5,10 @@ from fastapi import APIRouter
 from . import auth
 from . import content
 from . import users
+from . import homepage
+from . import collections
+from . import content_stories
+from . import content_teachings
 
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])
