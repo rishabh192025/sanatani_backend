@@ -12,23 +12,36 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base # Corrected import
 from app.models.user import User # Import User for relationship
+from app.models.user import LanguageCode
 
 # Enums
 class ContentStatus(PyEnum):
-    DRAFT = "draft"
-    PUBLISHED = "published"
-    ARCHIVED = "archived"
-    PENDING_REVIEW = "pending_review"
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    ARCHIVED = "ARCHIVED"
+    PENDING_REVIEW = "PENDING_REVIEW"
 
-class ContentType(PyEnum):
-    BOOK = "book"
-    AUDIOBOOK = "audiobook"
-    VIDEO = "video"
-    ARTICLE = "article"
-    PODCAST = "podcast"
 
-# Re-using LanguageCode from user model if it's identical, or define here if different
-from app.models.user import LanguageCode
+class ContentType(PyEnum): # Renamed from ContentEntityType for brevity
+    BOOK = "BOOK"
+    AUDIO = "AUDIO"
+    VIDEO = "VIDEO"
+    ARTICLE = "ARTICLE"
+    PODCAST_SERIES = "PODCAST_SERIES" # A series, episodes would be chapters/sections or related content
+    DIGITAL_TEXT = "DIGITAL_TEXT" # For scriptures, manuscripts if distinct from book/article
+    # Add more as needed
+
+class ContentSubType(PyEnum): # New Enum for more specific classification
+    BOOK = "BOOK"
+    GENERAL = "GENERAL" # Default
+    STORY = "STORY"
+    TEACHING = "TEACHING"
+    SCRIPTURE = "SCRIPTURE"
+    MANTRA = "MANTRA"
+    GUIDED_MEDITATION = "GUIDED_MEDITATION"
+    PODCAST_EPISODE = "PODCAST_EPISODE" # If an episode is a top-level content item
+    # Add others as needed
+
 
 class Content(Base):
     __tablename__ = "content"
@@ -41,6 +54,7 @@ class Content(Base):
     description = Column(Text, nullable=True)
     
     content_type = Column(SQLAlchemyEnum(ContentType), nullable=False, index=True)
+    sub_type = Column(SQLAlchemyEnum(ContentSubType), default=ContentSubType.GENERAL, nullable=True, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     tags = Column(JSON, nullable=True)
     language = Column(SQLAlchemyEnum(LanguageCode), default=LanguageCode.EN, nullable=False)
@@ -83,6 +97,7 @@ class Content(Base):
     # reviews = relationship("ContentReview", back_populates="content")
     # user_progress = relationship("UserProgress", back_populates="content")
     translations = relationship("ContentTranslation", back_populates="original_content")
+    collection_associations = relationship("CollectionItem", back_populates="content_item")
 
     def __repr__(self):
         return f"<Content(id={self.id}, title='{self.title}')>"

@@ -9,3 +9,6 @@ from .content_chapter import (
 from .content_section import ( # Added
     ContentSectionBase, ContentSectionCreate, ContentSectionUpdate, ContentSectionResponse
 )
+from .homepage import HomepageCard, HomepageCardsResponse
+from .category import CategoryBase, CategoryCreate, CategoryUpdate, CategoryResponse
+from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse

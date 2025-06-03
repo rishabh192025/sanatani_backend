@@ -13,8 +13,18 @@ from sqlalchemy.orm import selectinload
 
 class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
 
-    async def get_content(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
-        return await super().get(db, id=content_id)
+    async def get_content(
+        self, db: AsyncSession, content_id: PyUUID, sub_type_str: Optional[str] = None
+    ) -> Optional[Content]:
+        query = select(self.model).filter(self.model.id == content_id)
+        if sub_type_str:
+            try:
+                st_enum_val = ContentSubType[sub_type_str.upper()]
+                query = query.filter(self.model.sub_type == st_enum_val)
+            except KeyError:
+                return None # Invalid sub_type, so no content found matching this
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
 
     async def create_content(self, db: AsyncSession, *, obj_in: ContentCreate, author_id: PyUUID) -> Content:
         slug = await generate_slug(db, self.model, obj_in.title)
@@ -46,6 +56,7 @@ class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
         self, db: AsyncSession, *, 
         skip: int = 0, limit: int = 10,
         content_type_str: Optional[str] = None, # Renamed to avoid clash with model enum
+        sub_type_str: Optional[str] = None, # New filter
         category_id_str: Optional[str] = None, 
         language_str: Optional[str] = None,
         status_str: Optional[str] = None, # Added status filter
@@ -90,30 +101,56 @@ class CRUDContent(CRUDBase[Content, ContentCreate, ContentUpdate]):
                     Content.description.ilike(search_term)
                 )
             )
-        
+        if sub_type_str:
+            try:
+                st_enum_val = ContentSubType[sub_type_str.upper()]
+                query = query.where(Content.sub_type == st_enum_val)
+            except KeyError:
+                pass # Invalid sub_type string
+
         query = query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
 
-    async def get_content_by_slug(self, db: AsyncSession, slug: str) -> Optional[Content]:
-        result = await db.execute(select(Content).filter(Content.slug == slug))
+    async def get_content_by_slug(
+        self, db: AsyncSession, slug: str, sub_type_str: Optional[str] = None
+    ) -> Optional[Content]:
+        query = select(self.model).filter(self.model.slug == slug)
+        if sub_type_str:
+            try:
+                st_enum_val = ContentSubType[sub_type_str.upper()]
+                query = query.filter(self.model.sub_type == st_enum_val)
+            except KeyError:
+                return None
+        result = await db.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_content_with_chapters(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
-        result = await db.execute(
-            select(self.model)
-            .options(selectinload(self.model.chapters)) # Eager load chapters
-            .filter(self.model.id == content_id)
-        )
+    async def get_content_with_chapters(
+        self, db: AsyncSession, content_id: PyUUID, sub_type_str: Optional[str] = None
+    ) -> Optional[Content]:
+        from sqlalchemy.orm import selectinload
+        query = select(self.model).options(selectinload(self.model.chapters)).filter(self.model.id == content_id)
+        if sub_type_str:
+            try:
+                st_enum_val = ContentSubType[sub_type_str.upper()]
+                query = query.filter(self.model.sub_type == st_enum_val)
+            except KeyError:
+                return None
+        result = await db.execute(query)
         return result.scalar_one_or_none()
     
-    async def get_content_by_slug_with_chapters(self, db: AsyncSession, slug: str) -> Optional[Content]:
-        
-        result = await db.execute(
-            select(self.model)
-            .options(selectinload(self.model.chapters))
-            .filter(self.model.slug == slug)
-        )
+    async def get_content_by_slug_with_chapters(
+        self, db: AsyncSession, slug: str, sub_type_str: Optional[str] = None
+    ) -> Optional[Content]:
+        from sqlalchemy.orm import selectinload
+        query = select(self.model).options(selectinload(self.model.chapters)).filter(self.model.slug == slug)
+        if sub_type_str:
+            try:
+                st_enum_val = ContentSubType[sub_type_str.upper()]
+                query = query.filter(self.model.sub_type == st_enum_val)
+            except KeyError:
+                return None
+        result = await db.execute(query)
         return result.scalar_one_or_none()
 
 content_crud = CRUDContent(Content)
