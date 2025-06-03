@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from fastapi.middleware.trustedhost import TrustedHostMiddleware # Consider if needed for prod
 
-from app.api.v1 import auth, users, content # , admin, places, calendar # Placeholder for future routers
+from app.api.v1 import auth, users, content, place  # , admin, places, calendar # Placeholder for future routers
 from app.config import settings
 from app.database import Base, sync_engine # Use sync_engine for initial table creation
 from fastapi.staticfiles import StaticFiles
@@ -49,7 +49,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(content.router, prefix="/api/v1/content", tags=["Content"])
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
-# app.include_router(places.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
+app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
 # app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"]) # Placeholder
 
 @app.get("/", tags=["Root"])
