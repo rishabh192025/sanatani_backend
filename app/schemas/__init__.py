@@ -3,7 +3,9 @@ from .auth import Token, TokenData, UserLogin, Msg
 from .user import UserBase, UserCreate, UserUpdate, UserResponse
 from .place import SacredPlaceBase, SacredPlaceOut, SacredPlaceCreate, SacredPlaceUpdate, PlaceType
 from .content import ContentBase, ContentCreate, ContentUpdate, ContentResponse
-from .content_chapter import ( # Added
+from .content_chapter import (
     ContentChapterBase, ContentChapterCreate, ContentChapterUpdate, ContentChapterResponse
 )
-# ... other schemas
+from .content_section import ( # Added
+    ContentSectionBase, ContentSectionCreate, ContentSectionUpdate, ContentSectionResponse
+)

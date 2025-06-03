@@ -57,5 +57,28 @@ class CRUDContentChapter(CRUDBase[ContentChapter, ContentChapterCreate, ContentC
         self, db: AsyncSession, *, chapter_id: UUID
     ) -> Optional[ContentChapter]:
         return await self.get(db, id=chapter_id)
+    
+    async def get_chapter_with_sections(self, db: AsyncSession, chapter_id: UUID) -> Optional[ContentChapter]:
+        from sqlalchemy.orm import selectinload
+        result = await db.execute(
+            select(self.model)
+            .options(selectinload(self.model.sections)) # Eager load sections
+            .filter(self.model.id == chapter_id)
+        )
+        return result.scalar_one_or_none()
+    
+    async def get_chapters_by_content_id_with_sections(
+        self, db: AsyncSession, *, content_id: UUID, skip: int = 0, limit: int = 100
+    ) -> List[ContentChapter]:
+        from sqlalchemy.orm import selectinload
+        result = await db.execute(
+            select(self.model)
+            .options(selectinload(self.model.sections)) # Eager load sections
+            .filter(ContentChapter.content_id == content_id)
+            .order_by(ContentChapter.chapter_number)
+            .offset(skip)
+            .limit(limit)
+        )
+        return result.scalars().all()
 
 content_chapter_crud = CRUDContentChapter(ContentChapter)
