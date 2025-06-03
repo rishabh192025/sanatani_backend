@@ -4,9 +4,9 @@ from typing import List, Optional # Added Optional
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str ="postgresql://sanatani_user:yourpassword@localhost:5432/sanatani_db"
+    DATABASE_URL: str ="postgresql://postgres:sanatani_db@sanatanidb.criqcqc42dui.eu-north-1.rds.amazonaws.com:5432/sanatani_db"
     # Async Database URL
-    DATABASE_URL_ASYNC: str ="postgresql+asyncpg://sanatani_user:yourpassword@localhost:5432/sanatani_db"
+    DATABASE_URL_ASYNC: str ="postgresql+asyncpg://postgres:sanatani_db@sanatanidb.criqcqc42dui.eu-north-1.rds.amazonaws.com:5432/sanatani_db"
 
     # Security
     SECRET_KEY: str = "your-secret-key-here-please-change-me" # Make sure to change this
