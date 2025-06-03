@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import settings
 from app.database import Base
-from app.models import user, content, category  # ensure all models are imported
+from app.models import user, content, category, place  # ensure all models are imported
 
 engine = create_async_engine(settings.DATABASE_URL_ASYNC, echo=True)
 
