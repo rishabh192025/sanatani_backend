@@ -36,6 +36,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(100), unique=True, nullable=True, index=True)
+    clerk_user_id = Column(String(255), unique=True, nullable=False, index=True)
     phone_number = Column(String(20), unique=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     

@@ -38,6 +38,18 @@ class Settings(BaseSettings):
     # Project
     PROJECT_NAME: str = "Sanatani API"
 
+    # Clerk (Placeholders - fill in .env)
+    # Clerk Configuration (as needed by fastapi-clerk-auth)
+    # These might not be directly used if fastapi-clerk-auth handles init differently
+    # but are good to have if you ever need to interact with Clerk API directly.
+    CLERK_SECRET_KEY: Optional[str] = None       # Backend API Key
+    CLERK_PUBLISHABLE_KEY: Optional[str] = None  # Frontend API Key
+    CLERK_JWT_ISSUER: Optional[str] = None # e.g., "https://clerk.yourdomain.com" or from Clerk dashboard
+    CLERK_JWKS_URL: Optional[str] = "https://<your-clerk-domain>/.well-known/jwks.json"
+
+    # Webhook secret remains important
+    CLERK_WEBHOOK_SECRET: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'

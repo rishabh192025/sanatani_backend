@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 # from fastapi.middleware.trustedhost import TrustedHostMiddleware # Consider if needed for prod
 
 
-from app.api.v1 import auth, users, content, homepage, collections, content_stories, content_teachings, place # , admin, places, calendar # Placeholder for future routers
+from app.api.v1 import (
+    auth, users, content, homepage, collections, 
+    content_stories, content_teachings, place, webhooks
+    )
+     # , admin, places, calendar # Placeholder for future routers
 
 from app.config import settings
 from app.database import Base, sync_engine # Use sync_engine for initial table creation
@@ -56,7 +60,7 @@ app.include_router(content_stories.router, prefix="/api/v1/stories", tags=["Stor
 app.include_router(content_teachings.router, prefix="/api/v1/teachings", tags=["Teachings"])
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
 app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
-# app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"]) # Placeholder
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
 
 @app.get("/", tags=["Root"])
 async def root():
