@@ -12,3 +12,4 @@ pillow==10.1.0 # For image processing
 python-magic==0.4.27  # For file type detection
 aiosqlite
 filetype
+psycopg2==2.9.6
