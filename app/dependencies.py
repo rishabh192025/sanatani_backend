@@ -56,7 +56,7 @@ async def get_current_user(
 
 # Other dependencies like get_current_active_admin remain the same
 async def get_current_active_admin(
-    current_user: User = Depends(get_current_user)
+    #current_user: User = Depends(get_current_user)
 ) -> User:
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
@@ -66,7 +66,7 @@ async def get_current_active_admin(
     return current_user
 
 async def get_current_active_moderator_or_admin(
-    current_user: User = Depends(get_current_user)
+    #current_user: User = Depends(get_current_user)
 ) -> User:
     if current_user.role not in [UserRole.ADMIN, UserRole.MODERATOR]:
         raise HTTPException(

@@ -42,6 +42,11 @@ class ContentSubType(PyEnum): # New Enum for more specific classification
     PODCAST_EPISODE = "PODCAST_EPISODE" # If an episode is a top-level content item
     # Add others as needed
 
+class BookType(PyEnum):
+    TEXT = "TEXT"  # For e-books, PDFs, etc.
+    PDF = "PDF"  # For audiobooks
+    AUDIO = "AUDIO"  # For audiobooks, podcasts, etc.
+
 
 class Content(Base):
     __tablename__ = "content"
@@ -53,11 +58,13 @@ class Content(Base):
     subtitle = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
     
-    content_type = Column(SQLAlchemyEnum(ContentType), nullable=False, index=True)
-    sub_type = Column(SQLAlchemyEnum(ContentSubType), default=ContentSubType.GENERAL, nullable=True, index=True)
+    content_type = Column(String(50), nullable=False, index=True)
+    sub_type = Column(String(50), default=ContentSubType.GENERAL.value, nullable=True, index=True)
+    status = Column(String(50), default=ContentStatus.DRAFT.value, nullable=False)
+
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     tags = Column(JSON, nullable=True)
-    language = Column(SQLAlchemyEnum(LanguageCode), default=LanguageCode.EN, nullable=False)
+    language = Column(String(50), default=LanguageCode.EN, nullable=False)
     
     cover_image_url = Column(String(500), nullable=True)
     thumbnail_url = Column(String(500), nullable=True)
@@ -71,7 +78,6 @@ class Content(Base):
     translator = Column(String(200), nullable=True)
     narrator = Column(String(200), nullable=True)
     
-    status = Column(SQLAlchemyEnum(ContentStatus), default=ContentStatus.DRAFT, nullable=False)
     published_at = Column(DateTime, nullable=True)
     featured = Column(Boolean, default=False)
     premium_content = Column(Boolean, default=False)
@@ -99,6 +105,31 @@ class Content(Base):
     translations = relationship("ContentTranslation", back_populates="original_content")
     collection_associations = relationship("CollectionItem", back_populates="content_item")
 
+    # Enum property accessors
+    @property
+    def content_type_enum(self) -> ContentType:
+        return ContentType(self.content_type)
+
+    @content_type_enum.setter
+    def content_type_enum(self, value: ContentType):
+        self.content_type = value.value
+
+    @property
+    def sub_type_enum(self) -> ContentSubType:
+        return ContentSubType(self.sub_type)
+
+    @sub_type_enum.setter
+    def sub_type_enum(self, value: ContentSubType):
+        self.sub_type = value.value
+
+    @property
+    def status_enum(self) -> ContentStatus:
+        return ContentStatus(self.status)
+
+    @status_enum.setter
+    def status_enum(self, value: ContentStatus):
+        self.status = value.value
+
     def __repr__(self):
         return f"<Content(id={self.id}, title='{self.title}')>"
 
@@ -111,7 +142,7 @@ class ContentChapter(Base):
     content_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
     title = Column(String(300), nullable=False)
     chapter_number = Column(Integer, nullable=False)
-    chapter_intro_summary = Column(Text, nullable=True) # Optional summary for the chapter itself
+    description = Column(Text, nullable=True) # Optional summary for the chapter itself
     audio_url = Column(String(500), nullable=True)
     video_url = Column(String(500), nullable=True) # Added video_url if distinct from audio
     duration = Column(Integer, nullable=True)  # Duration of this chapter in seconds

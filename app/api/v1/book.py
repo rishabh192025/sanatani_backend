@@ -1,20 +1,18 @@
-# app/api/v1/content.py
+# app/api/v1/book.py
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID as PyUUID
 
 from app.database import get_async_db
-from app.schemas.content import ContentCreate, ContentResponse, ContentUpdate
-from app.schemas.content_chapter import ( # Import chapter schemas
-    ContentChapterCreate, ContentChapterResponse, ContentChapterUpdate
+from app.schemas.book import BookCreate, BookResponse, BookUpdate
+from app.schemas.book_chapter import ( # Import chapter schemas
+    BookChapterCreate, BookChapterResponse, BookChapterUpdate
 )
-from app.schemas.content_section import ( # Import section schemas
-    ContentSectionCreate, ContentSectionResponse, ContentSectionUpdate
+from app.schemas.book_section import ( # Import section schemas
+    BookSectionCreate, BookSectionResponse, BookSectionUpdate
 )
-from app.crud.content_section import content_section_crud # Import section CRUD
-from app.crud.content import content_crud
-from app.crud.content_chapter import content_chapter_crud # Import chapter CRUD
+from app.crud.book import book_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
 from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
@@ -22,33 +20,38 @@ from app.services.file_service import file_service
 
 router = APIRouter()
 
-@router.get("", response_model=List[ContentResponse], summary="List all content (generic)")
-async def list_all_generic_content( # Renamed for clarity
+@router.get("", summary="List all books")
+async def list_all_books( # Renamed for clarity
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
-    content_type: Optional[str] = Query(None, description="Filter by content type (e.g., BOOK, ARTICLE)"),
-    sub_type: Optional[str] = Query(None, description="Filter by sub-type (e.g., STORY, TEACHING)"),
     category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
+    #book_type: Optional[str] = Query("TEXT", description="Filter by book type: TEXT, AUDIO"),
     db: AsyncSession = Depends(get_async_db)
 ):
-    contents = await content_crud.get_content_list(
+    # mapped_book_type = None
+    # if book_type:
+    #     try:
+    #         mapped_book_type = BookType[book_type.upper()]
+    #     except KeyError:
+    #         raise HTTPException(status_code=400, detail="Invalid book_type value")
+
+    contents = await book_crud.get_book_list(
         db=db, 
         skip=skip, 
         limit=limit,
-        content_type_str=content_type, # Pass the value
-        sub_type_str=sub_type,         # Pass the value
-        category_id_str=category_id,   # Pass the value
-        language_str=language,       # Pass the value
-        status_str=status_filter or ContentStatus.PUBLISHED.value, # Pass the value
-        search_query=search            # Pass the value
+        # book_type_filter=mapped_book_type, # Pass to CRUD
+        category_id_str=category_id,
+        language_str=language,
+        status_str=status_filter or ContentStatus.PUBLISHED.value,
+        search_query=search
     )
     return contents
 
-@router.get("/{content_id_or_slug}", response_model=ContentResponse)
-async def get_single_content( # Renamed
+@router.get("/{content_id_or_slug}", response_model=BookResponse)
+async def get_single_book( # Renamed
     content_id_or_slug: str,
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
@@ -59,10 +62,10 @@ async def get_single_content( # Renamed
     try:
         # Try to interpret as UUID first
         content_uuid = PyUUID(content_id_or_slug)
-        content = await content_crud.get_content(db=db, content_id=content_uuid)
+        content = await book_crud.get_book(db=db, content_id=content_uuid)
     except ValueError:
         # If not a valid UUID, assume it's a slug
-        content = await content_crud.get_content_by_slug(db=db, slug=content_id_or_slug)
+        content = await book_crud.get_book_by_slug(db=db, slug=content_id_or_slug)
     
     if not content:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
@@ -73,10 +76,10 @@ async def get_single_content( # Renamed
     
     return content
 
-@router.post("", response_model=ContentResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_content( # Renamed
-    content_in: ContentCreate, # Changed parameter name for clarity
-    current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_new_book( # Renamed
+    content_in: BookCreate, # Changed parameter name for clarity
+    #current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -86,62 +89,63 @@ async def create_new_content( # Renamed
     # author_name can be set from content_in if it's for a traditional author
     # not on the platform. If current_user is the author, author_name can be derived.
     
-    new_content = await content_crud.create_content(
+    new_content = await book_crud.create_book(
         db=db, 
-        obj_in=content_in, 
-        author_id=current_user.id
+        obj_in=content_in,
+        #author_id=current_user.id,
+        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
     )
     return new_content
 
-@router.put("/{content_id}", response_model=ContentResponse)
-async def update_existing_content( # Renamed
+@router.put("/{content_id}")
+async def update_existing_book( # Renamed
     content_id: PyUUID, # Expect UUID
-    content_in: ContentUpdate,
-    current_user: User = Depends(get_current_user), # More granular check below
+    content_in: BookUpdate,
+    #current_user: User = Depends(get_current_user), # More granular check below
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
     Update existing content.
     Requires Admin, Moderator, or the content author.
     """
-    db_content = await content_crud.get_content(db, content_id=content_id)
+    db_content = await book_crud.get_book(db, content_id=content_id)
     if not db_content:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
 
     # Permission check
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"] # Using strings here for now
-    is_author = db_content.author_id == current_user.id
+    # is_admin_or_moderator = current_user.role in ["admin", "moderator"] # Using strings here for now
+    # is_author = db_content.author_id == current_user.id
     
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
+    # if not (is_admin_or_moderator or is_author):
+    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
         
-    updated_content = await content_crud.update(db=db, db_obj=db_content, obj_in=content_in)
+    updated_content = await book_crud.update(db=db, db_obj=db_content, obj_in=content_in)
     return updated_content
 
 
 @router.delete("/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_existing_content( # Renamed
+async def delete_existing_book( # Renamed
     content_id: PyUUID, # Expect UUID
-    current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
     Delete content. Requires Admin role.
     Consider soft delete vs hard delete. CRUDBase.remove does a hard delete.
     """
-    db_content = await content_crud.get_content(db, content_id=content_id)
+    db_content = await book_crud.get_book(db, content_id=content_id)
     if not db_content:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
     
-    await content_crud.remove(db=db, id=content_id)
+    await book_crud.remove(db=db, id=content_id)
     return # No content response for 204
 
-
+'''
 @router.post("/{content_id}/upload-file", summary="Upload a primary file for content (e.g., PDF, MP3)")
 async def upload_content_main_file( # Renamed for clarity
     content_id: PyUUID,
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user), # Granular check below
+    #current_user: User = Depends(get_current_user), # Granular check below
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -180,7 +184,7 @@ async def upload_content_main_file( # Renamed for clarity
 async def create_chapter_for_content(
     content_id: PyUUID,
     chapter_in: ContentChapterCreate,
-    current_user: User = Depends(get_current_user), # Granular check
+    #current_user: User = Depends(get_current_user), # Granular check
     db: AsyncSession = Depends(get_async_db)
 ):
     content_item = await content_crud.get_content(db, content_id=content_id)
@@ -244,7 +248,7 @@ async def update_specific_chapter(
     content_id: PyUUID,
     chapter_id: PyUUID,
     chapter_in: ContentChapterUpdate,
-    current_user: User = Depends(get_current_user), 
+    #current_user: User = Depends(get_current_user), 
     db: AsyncSession = Depends(get_async_db)
 ):
     db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id) # Fetch without sections first
@@ -277,7 +281,7 @@ async def update_specific_chapter(
 async def delete_specific_chapter(
     content_id: PyUUID,
     chapter_id: PyUUID,
-    current_user: User = Depends(get_current_user), # Granular check
+    #current_user: User = Depends(get_current_user), # Granular check
     db: AsyncSession = Depends(get_async_db)
 ):
     db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
@@ -298,7 +302,7 @@ async def delete_specific_chapter(
 async def upload_content_main_file(
     content_id: PyUUID,
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    #current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_content = await content_crud.get_content(db, content_id=content_id)
@@ -333,7 +337,7 @@ async def create_section_for_chapter(
     content_id: PyUUID, # For verification
     chapter_id: PyUUID,
     section_in: ContentSectionCreate,
-    current_user: User = Depends(get_current_user),
+    #current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify chapter exists and belongs to content
@@ -406,7 +410,7 @@ async def update_specific_section(
     chapter_id: PyUUID, # For verification
     section_id: PyUUID,
     section_in: ContentSectionUpdate,
-    current_user: User = Depends(get_current_user),
+    #current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_section = await content_section_crud.get_section(db=db, section_id=section_id)
@@ -440,7 +444,7 @@ async def delete_specific_section(
     content_id: PyUUID, # For verification
     chapter_id: PyUUID, # For verification
     section_id: PyUUID,
-    current_user: User = Depends(get_current_user),
+    #current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_section = await content_section_crud.get_section(db=db, section_id=section_id)
@@ -456,3 +460,4 @@ async def delete_specific_section(
     
     await content_section_crud.remove(db=db, id=section_id)
     return
+'''

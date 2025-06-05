@@ -86,7 +86,9 @@ async def refresh_access_token(
         raise credentials_exception
 
 @router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_user)):
+async def read_users_me(
+    #current_user: User = Depends(get_current_user)
+    ):
     """
     Get current logged-in user.
     """
