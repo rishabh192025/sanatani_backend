@@ -37,7 +37,7 @@ if not settings.DATABASE_URL_ASYNC:
 #)
 async_engine = create_async_engine(
     settings.DATABASE_URL_ASYNC,
-    echo=True,
+    echo=False,
     connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL_ASYNC else {},
 )
 

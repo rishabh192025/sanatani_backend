@@ -15,7 +15,6 @@ class BookBase(BaseModel):
     tags: Optional[List[str]] = Field(None, max_items=20)
     cover_image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
-    # file_url for main downloadable if applicable (e.g., full e-book, zip of audio)
     file_url: Optional[str] = None 
 
 class BookCreate(BookBase):
@@ -39,27 +38,22 @@ class BookUpdate(BaseModel): # Does not inherit BookBase
     author_name: Optional[str] = Field(None, max_length=200)
     status: Optional[str] = ContentStatus.PUBLISHED.value # Make status optional for update
     featured: Optional[bool] = None
-    # book_type: Optional[BookType] = None # Can a book's fundamental type change?
 
 class BookResponse(BookBase):
     id: UUID
     slug: str
     author_name: Optional[str] = None
-    category_id: Optional[UUID] = None
+    category_id: Optional[str] = None
     status: str
     published_at: Optional[datetime] = None
     featured: bool
     premium_content: bool
-    
     view_count: int
     like_count: int
     bookmark_count: int
     average_rating: Optional[float] = None
     review_count: int
-    
     page_count: Optional[int] = None # Overall page count (e.g., for books)
-    # Optionally include chapters in the main content response
-    chapters: Optional[List[BookChapterResponse]] = [] 
     created_at: datetime
     updated_at: datetime
     

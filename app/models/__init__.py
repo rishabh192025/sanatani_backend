@@ -6,7 +6,7 @@ from .category import Category
 
 from .place import SacredPlace
 
-from .content import Content, ContentType, ContentStatus, ContentChapter, ContentSection
+from .content import Content, ContentType, ContentStatus, BookChapter, BookSection
 
 from .collection import Collection, CollectionItem
 
