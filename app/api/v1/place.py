@@ -28,14 +28,22 @@ async def create_place(
 
 @router.get("", response_model=List[SacredPlaceOut])
 async def list_places(
+    is_featured_place: Optional[bool] = Query(None),
+    category: Optional[str] = Query(None),
+    region: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
     country: Optional[str] = Query(None),
-    place_type: Optional[PlaceType] = Query(None),
+    place_type: Optional[PlaceType] = Query(None),          # covered in category for user side
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
 ):
     return await sacred_place_crud.get_filtered(
         db=db,
+        is_featured_place=is_featured_place,
+        category=category,
+        region=region,
+        state=state,
         country=country,
         place_type=place_type.value if place_type else None,
         skip=skip,

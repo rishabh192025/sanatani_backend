@@ -20,7 +20,7 @@ class SacredPlace(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     place_name = Column(String(200), nullable=False, index=True)
     alternate_names = Column(JSON, nullable=True)  # Array of alternative names, not needed now
-    categories = Column(Enum(PlaceType), nullable=False, index=True) # changed this to match UI
+    category = Column(Enum(PlaceType), nullable=False, index=True) # changed this to match UI
 
     # Location Details
     region = Column(String(100))  # added this to match UI
@@ -64,6 +64,7 @@ class SacredPlace(Base):
     # Status & Verification # not needed now
     verification_status = Column(String(50), default="pending")  # verified, pending, disputed
     is_active = Column(Boolean, default=True)
+    is_featured_place = Column(Boolean, nullable=True)
     accessibility_info = Column(JSON, nullable=True)
 
     # Engagement    # not needed now
@@ -80,5 +81,5 @@ class SacredPlace(Base):
 
     __table_args__ = (
         Index('idx_location', 'latitude', 'longitude'),
-        Index('idx_place_country_type', 'country', 'categories'),
+        Index('idx_place_country_type', 'country', 'category'),
     )

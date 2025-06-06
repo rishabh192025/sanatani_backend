@@ -18,6 +18,10 @@ class CRUDSacredPlace(CRUDBase[SacredPlace, SacredPlaceCreate, SacredPlaceUpdate
     async def get_filtered(
         self,
         db: AsyncSession,
+        is_featured_place: Optional[bool] = None,
+        category: Optional[str] = None,
+        region: Optional[str] = None,
+        state: Optional[str] = None,
         country: Optional[str] = None,
         place_type: Optional[PlaceType] = None,
         skip: int = 0,
@@ -25,10 +29,18 @@ class CRUDSacredPlace(CRUDBase[SacredPlace, SacredPlaceCreate, SacredPlaceUpdate
     ) -> List[SacredPlace]:
         query = select(self.model)
 
+        if is_featured_place is not None:
+            query = query.where(self.model.is_featured_place == is_featured_place)
+        if category:
+            query = query.where(self.model.category == category)
+        if region:
+            query = query.where(self.model.region == region)
+        if state:
+            query = query.where(self.model.state_province == state)
         if country:
             query = query.where(self.model.country == country)
         if place_type:
-            query = query.where(self.model.categories == place_type)
+            query = query.where(self.model.category == place_type)
 
         query = query.offset(skip).limit(limit)
         result = await db.execute(query)

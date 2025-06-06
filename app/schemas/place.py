@@ -17,7 +17,7 @@ class PlaceType(str, Enum):
 class SacredPlaceBase(BaseModel):
     place_name: str
     alternate_names: Optional[List[str]] = None
-    categories: PlaceType
+    category: PlaceType
 
     region: Optional[str] = None
     address: Optional[str] = None
@@ -54,6 +54,7 @@ class SacredPlaceBase(BaseModel):
 
     verification_status: Optional[str] = "pending"
     is_active: Optional[bool] = True
+    is_featured_place: Optional[bool] = False
     accessibility_info: Optional[Dict[str, Union[str, int, List]]] = None
 
     visit_count: Optional[int] = 0
@@ -68,7 +69,7 @@ class SacredPlaceCreate(SacredPlaceBase):
 class SacredPlaceUpdate(BaseModel):
     place_name: Optional[str] = None
     alternate_names: Optional[List[str]] = None
-    categories: Optional[PlaceType] = None
+    category: Optional[PlaceType] = None
 
     region: Optional[str] = None
     address: Optional[str] = None
@@ -105,6 +106,7 @@ class SacredPlaceUpdate(BaseModel):
 
     verification_status: Optional[str] = None
     is_active: Optional[bool] = None
+    is_featured_place: Optional[bool] = None
     accessibility_info: Optional[Dict[str, Union[str, int, List]]] = None
 
     visit_count: Optional[int] = 0
@@ -114,6 +116,7 @@ class SacredPlaceUpdate(BaseModel):
 
 class SacredPlaceOut(SacredPlaceBase):
     id: UUID4
+    is_featured_place: Optional[bool] = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     created_by: Optional[UUID4] = None
