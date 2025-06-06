@@ -96,7 +96,7 @@ class ContentChapter(Base):
     content_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
     title = Column(String(300), nullable=False)
     chapter_number = Column(Integer, nullable=False)
-    content_body = Column(Text, nullable=True) # For text-based chapters (books, articles)
+    chapter_intro_summary = Column(Text, nullable=True) # Optional summary for the chapter itself
     audio_url = Column(String(500), nullable=True)
     video_url = Column(String(500), nullable=True) # Added video_url if distinct from audio
     duration = Column(Integer, nullable=True)  # Duration of this chapter in seconds
@@ -107,7 +107,12 @@ class ContentChapter(Base):
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     content = relationship("Content", back_populates="chapters")
-    
+    sections = relationship(
+        "ContentSection", 
+        back_populates="chapter", 
+        cascade="all, delete-orphan",
+        order_by="ContentSection.section_order"
+    )
     __table_args__ = (
         UniqueConstraint('content_id', 'chapter_number', name='uq_content_chapter_number'),
         Index('idx_content_chapter_content_id_chapter_number', 'content_id', 'chapter_number'),
@@ -115,6 +120,37 @@ class ContentChapter(Base):
 
     def __repr__(self):
         return f"<ContentChapter(id={self.id}, title='{self.title}', chapter_no={self.chapter_number})>"
+
+class ContentSection(Base):
+    __tablename__ = "content_sections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chapter_id = Column(UUID(as_uuid=True), ForeignKey("content_chapters.id"), nullable=False)
+    
+    title = Column(String(500), nullable=True) # Section title can be optional if it's just a block of text
+    body = Column(Text, nullable=False)        # The actual text content of the section
+    section_order = Column(Integer, nullable=False, default=0) # For ordering sections within a chapter
+
+    # Optional: if sections can also have their own audio/video snippets
+    # audio_url = Column(String(500), nullable=True)
+    # video_url = Column(String(500), nullable=True)
+    # duration = Column(Integer, nullable=True) 
+
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+
+    chapter = relationship("ContentChapter", back_populates="sections")
+
+    __table_args__ = (
+        UniqueConstraint('chapter_id', 'section_order', name='uq_chapter_section_order'),
+        # Consider a unique constraint on chapter_id and title if titles must be unique per chapter
+        # UniqueConstraint('chapter_id', 'title', name='uq_chapter_section_title'),
+        Index('idx_content_section_chapter_id_order', 'chapter_id', 'section_order'),
+    )
+
+    def __repr__(self):
+        return f"<ContentSection(id={self.id}, title='{self.title}', order={self.section_order})>"
+
 
 class ContentTranslation(Base):
     __tablename__ = "content_translation"
