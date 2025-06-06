@@ -4,28 +4,36 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
-
+from sqlalchemy.sql import func
 from app.crud.base import CRUDBase
 from app.models.content import BookSection # Using specific BookSection model
 from app.schemas.book_section import BookSectionCreate, BookSectionUpdate
 
 class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate]):
     
+
+    async def get_max_section_order(self, db: AsyncSession, chapter_id: UUID) -> int:
+        """Gets the maximum section_order for a given chapter_id."""
+        result = await db.execute(
+            select(func.max(BookSection.section_order))
+            .filter(BookSection.chapter_id == chapter_id)
+        )
+        max_order = result.scalar_one_or_none()
+        return max_order if max_order is not None else -1 # Start order from 0, so next is max_order + 1
+
     async def create_for_chapter(
         self, db: AsyncSession, *, obj_in: BookSectionCreate, chapter_id: UUID
     ) -> BookSection:
-        # Ensure obj_in doesn't try to set chapter_id from payload if it was added to base schema
-        # section_data = obj_in.model_dump(exclude={'chapter_id'} if 'chapter_id' in obj_in.__fields__ else None)
-        section_data = obj_in.model_dump() # chapter_id is not in BookSectionCreate base
-
-        # Logic to ensure section_order is unique for this chapter_id
-        existing_section_order = await self.get_by_chapter_and_order(
-             db, chapter_id=chapter_id, section_order=section_data.get("section_order", 0)
+        # Auto-increment section_order
+        max_section_order = await self.get_max_section_order(db, chapter_id=chapter_id)
+        next_section_order = max_section_order + 1
+        
+        section_data = obj_in.model_dump()
+        db_obj = BookSection(
+            **section_data, 
+            chapter_id=chapter_id,
+            section_order=next_section_order # Set auto-generated order
         )
-        if existing_section_order:
-            raise ValueError(f"Section order {section_data.get('section_order', 0)} already exists for this chapter.")
-
-        db_obj = BookSection(**section_data, chapter_id=chapter_id)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)

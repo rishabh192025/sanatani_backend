@@ -5,26 +5,34 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
 from sqlalchemy.orm import selectinload
-
+from sqlalchemy.sql import func
 from app.crud.base import CRUDBase
 from app.models.content import BookChapter # Using the specific BookChapter model
 from app.schemas.book_chapter import BookChapterCreate, BookChapterUpdate
 
 class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate]):
     
-    async def create_for_book(
-        self, db: AsyncSession, *, obj_in: BookChapterCreate, book_id: UUID # book_id is content_id
-    ) -> BookChapter:
-        # Logic to ensure chapter_number is unique for this book_id
-        existing_chapter_num = await self.get_by_book_and_chapter_number(
-            db, book_id=book_id, chapter_number=obj_in.chapter_number
+    async def get_max_chapter_number(self, db: AsyncSession, book_id: UUID) -> int:
+        """Gets the maximum chapter_number for a given book_id."""
+        result = await db.execute(
+            select(func.max(BookChapter.chapter_number))
+            .filter(BookChapter.book_id == book_id)
         )
-        if existing_chapter_num:
-            raise ValueError(f"Chapter number {obj_in.chapter_number} already exists for this book.")
+        max_num = result.scalar_one_or_none()
+        return max_num if max_num is not None else 0
 
+    async def create_for_book(
+        self, db: AsyncSession, *, obj_in: BookChapterCreate, book_id: UUID
+    ) -> BookChapter:
+        # Auto-increment chapter_number
+        max_chapter_num = await self.get_max_chapter_number(db, book_id=book_id)
+        next_chapter_num = max_chapter_num + 1
+
+        # Create the chapter with the determined chapter_number
         db_obj = BookChapter(
             **obj_in.model_dump(), 
-            book_id=book_id # Map book_id to content_id
+            book_id=book_id,
+            chapter_number=next_chapter_num # Set auto-generated number
         )
         db.add(db_obj)
         await db.commit()

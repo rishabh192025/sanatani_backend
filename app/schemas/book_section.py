@@ -7,7 +7,7 @@ from datetime import datetime
 class BookSectionBase(BaseModel):
     title: Optional[str] = Field(None, max_length=500)
     body: str
-    section_order:  Optional[int] = Field(default=0, ge=0)
+    #section_order:  Optional[int] = Field(default=0, ge=0)
 
 class BookSectionCreate(BookSectionBase):
     pass # chapter_id will be path parameter
@@ -19,7 +19,7 @@ class BookSectionResponse(BookSectionBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
-
+    section_order: int
     class Config:
         from_attributes = True
 
