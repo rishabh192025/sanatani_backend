@@ -6,17 +6,24 @@ from uuid import UUID as PyUUID
 
 from app.database import get_async_db
 from app.schemas.book import BookCreate, BookResponse, BookUpdate
-from app.schemas.book_chapter import ( # Import chapter schemas
-    BookChapterCreate, BookChapterResponse, BookChapterUpdate
-)
-from app.schemas.book_section import ( # Import section schemas
-    BookSectionCreate, BookSectionResponse, BookSectionUpdate
-)
 from app.crud.book import book_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
 from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
 from app.services.file_service import file_service
+
+from app.crud.book_chapter import book_chapter_crud # New
+from app.crud.book_section import book_section_crud # New
+from app.schemas.book_chapter import (
+    BookChapterCreate, # Using specific if you keep them separate
+    BookChapterResponse,
+    BookChapterUpdate
+)
+from app.schemas.book_section import (
+    BookSectionCreate,
+    BookSectionResponse,
+    BookSectionUpdate
+)
 
 router = APIRouter()
 
@@ -141,6 +148,257 @@ async def delete_existing_book( # Renamed
     await book_crud.remove(db=db, id=content_id)
     return # No content response for 204
 
+# --- Book Chapter Endpoints ---
+BOOK_CHAPTER_TAG = "Book Chapters"
+
+@router.post(
+    "/{book_id}/chapters", 
+    response_model=BookChapterResponse, 
+    status_code=status.HTTP_201_CREATED,
+    tags=[BOOK_CHAPTER_TAG]
+)
+async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
+    book_id: PyUUID,
+    chapter_in: BookChapterCreate, # Use specific BookChapterCreate
+    #current_user: User = Depends(get_current_user), # Permissions
+    db: AsyncSession = Depends(get_async_db)
+):
+    book = await book_crud.get_book(db, content_id=book_id)
+    if not book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+
+    # Permission check (e.g., Admin, Moderator, or Author of the book)
+    # ... (implement your permission logic)
+
+    try:
+        chapter = await book_chapter_crud.create_for_book( # Use book_chapter_crud
+            db=db, obj_in=chapter_in, book_id=book_id
+        )
+    except ValueError as e: 
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return chapter
+
+# ... other chapter endpoints (GET list, GET single, PUT, DELETE) using book_chapter_crud ...
+# Example for GET single chapter:
+@router.get(
+    "/{book_id}/chapters/{chapter_id}", 
+    response_model=BookChapterResponse,
+    tags=[BOOK_CHAPTER_TAG]
+)
+async def get_specific_book_chapter_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    include_sections: bool = Query(True, description="Whether to include sections"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    chapter = await book_chapter_crud.get_chapter_by_id( # Use book_chapter_crud
+        db=db, chapter_id=chapter_id, book_id=book_id, load_sections=include_sections
+    )
+    if not chapter: # get_chapter_by_id already checks book_id match if provided
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found for this book")
+    return chapter
+
+@router.get(
+    "/{book_id}/chapters", 
+    response_model=List[BookChapterResponse],
+    tags=[BOOK_CHAPTER_TAG]
+)
+async def list_book_chapters_route(
+    book_id: PyUUID,
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    List all chapters for a specific book.
+    """
+    book = await book_crud.get_book(db, content_id=book_id)
+    if not book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+
+    chapters = await book_chapter_crud.get_chapters_for_book(
+        db=db, book_id=book_id, skip=skip, limit=limit
+    )
+    return chapters
+
+@router.put(
+    "/{book_id}/chapters/{chapter_id}",
+    response_model=BookChapterResponse,
+    tags=[BOOK_CHAPTER_TAG]
+)
+async def update_book_chapter_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    chapter_in: BookChapterUpdate, # Use specific BookChapterUpdate
+    #current_user: User = Depends(get_current_user), # Permissions
+    db: AsyncSession = Depends(get_async_db)
+):
+    # Verify chapter exists and belongs to book
+    chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
+
+    # Permission check (e.g., Admin, Moderator, or Author of the parent book)
+    # ... (implement your permission logic) ...
+
+    try:
+        updated_chapter = await book_chapter_crud.update(
+            db=db, db_obj=chapter, obj_in=chapter_in
+        )
+    except ValueError as e: 
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return updated_chapter
+@router.delete(
+    "/{book_id}/chapters/{chapter_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=[BOOK_CHAPTER_TAG]
+)
+async def delete_book_chapter_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Delete a book chapter. Requires Admin role.
+    """
+    chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
+    
+    await book_chapter_crud.remove(db=db, id=chapter_id)
+    return # No content response for 204
+
+
+# --- Book Section Endpoints ---
+BOOK_SECTION_TAG = "Book Sections"
+
+@router.post(
+    "/{book_id}/chapters/{chapter_id}/sections", 
+    response_model=BookSectionResponse, 
+    status_code=status.HTTP_201_CREATED,
+    tags=[BOOK_SECTION_TAG]
+)
+async def create_section_for_book_chapter_route(
+    book_id: PyUUID, 
+    chapter_id: PyUUID,
+    section_in: BookSectionCreate, # Use specific BookSectionCreate
+    #current_user: User = Depends(get_current_user), # Permissions
+    db: AsyncSession = Depends(get_async_db)
+):
+    # Verify chapter exists and belongs to book
+    chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
+
+    # Permission check (e.g., Admin, Moderator, or Author of the parent book)
+    # ... (implement your permission logic) ...
+
+    try:
+        section = await book_section_crud.create_for_chapter( # Use book_section_crud
+            db=db, obj_in=section_in, chapter_id=chapter_id
+        )
+    except ValueError as e: 
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not create section: {str(e)}")
+    return section
+# ... other section endpoints (GET list, GET single, PUT, DELETE) using book_section_crud ...
+@router.get(
+    "/{book_id}/chapters/{chapter_id}/sections/{section_id}", 
+    response_model=BookSectionResponse,
+    tags=[BOOK_SECTION_TAG]
+)
+async def get_specific_book_section_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    section_id: PyUUID,
+    db: AsyncSession = Depends(get_async_db)
+):
+    section = await book_section_crud.get_section_by_id( # Use book_section_crud
+        db=db, section_id=section_id, chapter_id=chapter_id
+    )
+    if not section:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found for this chapter")
+    return section
+
+@router.get(
+    "/{book_id}/chapters/{chapter_id}/sections", 
+    response_model=List[BookSectionResponse],
+    tags=[BOOK_SECTION_TAG]
+)
+async def list_book_sections_route( # Renamed for clarity
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    List all sections for a specific chapter in a book.
+    """
+    chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
+    if not chapter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
+
+    sections = await book_section_crud.get_sections_for_chapter(
+        db=db, chapter_id=chapter_id, skip=skip, limit=limit
+    )
+    return sections
+
+
+@router.put(
+    "/{book_id}/chapters/{chapter_id}/sections/{section_id}",
+    response_model=BookSectionResponse,
+    tags=[BOOK_SECTION_TAG]
+)
+async def update_book_section_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    section_id: PyUUID,
+    section_in: BookSectionUpdate, # Use specific BookSectionUpdate
+    #current_user: User = Depends(get_current_user), # Permissions
+    db: AsyncSession = Depends(get_async_db)
+):
+    # Verify section exists and belongs to chapter
+    section = await book_section_crud.get_section_by_id(db=db, section_id=section_id, chapter_id=chapter_id)
+    if not section:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to this chapter")
+
+    # Permission check (e.g., Admin, Moderator, or Author of the parent book)
+    # ... (implement your permission logic) ...
+
+    try:
+        updated_section = await book_section_crud.update(
+            db=db, db_obj=section, obj_in=section_in
+        )
+    except ValueError as e: 
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not update section: {str(e)}")
+    return updated_section
+
+@router.delete(
+    "/{book_id}/chapters/{chapter_id}/sections/{section_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=[BOOK_SECTION_TAG]
+)
+async def delete_book_section_route(
+    book_id: PyUUID,
+    chapter_id: PyUUID,
+    section_id: PyUUID,
+    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Delete a book section. Requires Admin role.
+    """
+    section = await book_section_crud.get_section_by_id(db=db, section_id=section_id, chapter_id=chapter_id)
+    if not section:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to this chapter")
+    
+    await book_section_crud.remove(db=db, id=section_id)
+    return
+
+
+
+
 '''
 @router.post("/{content_id}/upload-file", summary="Upload a primary file for content (e.g., PDF, MP3)")
 async def upload_content_main_file( # Renamed for clarity
@@ -181,123 +439,6 @@ async def upload_content_main_file( # Renamed for clarity
 
 # Add similar endpoints for cover_image_url and thumbnail_url if direct upload is desired for them too.
 
-@router.post("/{content_id}/chapters/", response_model=ContentChapterResponse, status_code=status.HTTP_201_CREATED)
-async def create_chapter_for_content(
-    content_id: PyUUID,
-    chapter_in: ContentChapterCreate,
-    #current_user: User = Depends(get_current_user), # Granular check
-    db: AsyncSession = Depends(get_async_db)
-):
-    content_item = await content_crud.get_content(db, content_id=content_id)
-    if not content_item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent content not found")
-
-    # Permission check: Admin, Moderator, or Author of the parent content
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = content_item.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to add chapters to this content")
-
-    try:
-        chapter = await content_chapter_crud.create_with_content_id(
-            db=db, obj_in=chapter_in, content_id=content_id
-        )
-    except ValueError as e: # Catch duplicate chapter number error
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return chapter
-
-@router.get("/{content_id}/chapters/", response_model=List[ContentChapterResponse])
-async def list_chapters_for_content(
-    content_id: PyUUID,
-    include_sections: bool = Query(False, description="Whether to include sections for each chapter in the list"), # Default to false for list view
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
-    db: AsyncSession = Depends(get_async_db)
-):
-    content_item = await content_crud.get_content(db, content_id=content_id)
-    if not content_item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent content not found")
-    
-    if include_sections:
-        chapters = await content_chapter_crud.get_chapters_by_content_id_with_sections(
-            db=db, content_id=content_id, skip=skip, limit=limit
-        )
-    else:
-        chapters = await content_chapter_crud.get_chapters_by_content_id(
-            db=db, content_id=content_id, skip=skip, limit=limit
-        )
-    return chapters
-
-@router.get("/{content_id}/chapters/{chapter_id}", response_model=ContentChapterResponse)
-async def get_specific_chapter(
-    content_id: PyUUID,
-    chapter_id: PyUUID,
-    include_sections: bool = Query(True, description="Whether to include sections in the response"),
-    db: AsyncSession = Depends(get_async_db)
-):
-    if include_sections:
-        chapter = await content_chapter_crud.get_chapter_with_sections(db=db, chapter_id=chapter_id)
-    else:
-        chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
-        
-    if not chapter or chapter.content_id != content_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to specified content")
-    return chapter
-
-@router.put("/{content_id}/chapters/{chapter_id}", response_model=ContentChapterResponse)
-async def update_specific_chapter(
-    content_id: PyUUID,
-    chapter_id: PyUUID,
-    chapter_in: ContentChapterUpdate,
-    #current_user: User = Depends(get_current_user), 
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id) # Fetch without sections first
-    if not db_chapter or db_chapter.content_id != content_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-
-    content_item = await content_crud.get_content(db, content_id=db_chapter.content_id) # Get parent
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = content_item and content_item.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to update this chapter")
-
-    # Check for chapter number change and potential collision
-    if chapter_in.chapter_number is not None and chapter_in.chapter_number != db_chapter.chapter_number:
-        existing_chapter_with_new_number = await content_chapter_crud.get_by_content_and_chapter_number(
-            db, content_id=content_id, chapter_number=chapter_in.chapter_number
-        )
-        if existing_chapter_with_new_number and existing_chapter_with_new_number.id != chapter_id: # Ensure it's not the same chapter
-            raise HTTPException(status_code=400, detail=f"Chapter number {chapter_in.chapter_number} already exists for this content.")
-
-    await content_chapter_crud.update(db=db, db_obj=db_chapter, obj_in=chapter_in) # Perform the update
-
-    # Now, fetch the fully updated chapter with its sections for the response
-    updated_chapter_with_sections = await content_chapter_crud.get_chapter_with_sections(db=db, chapter_id=chapter_id)
-    if not updated_chapter_with_sections: # Should not happen if update was successful
-         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Updated chapter could not be retrieved")
-    return updated_chapter_with_sections
-
-@router.delete("/{content_id}/chapters/{chapter_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_specific_chapter(
-    content_id: PyUUID,
-    chapter_id: PyUUID,
-    #current_user: User = Depends(get_current_user), # Granular check
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
-    if not db_chapter or db_chapter.content_id != content_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found")
-
-    content_item = await content_crud.get_content(db, content_id=db_chapter.content_id) # Get parent
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = content_item and content_item.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this chapter")
-    
-    await content_chapter_crud.remove(db=db, id=chapter_id)
-    return
-
 # --- File Upload Endpoint for Content (main file, not chapter specific audio/video) ---
 @router.post("/{content_id}/upload-main-file", summary="Upload a primary file for content (e.g., PDF, MP3 for whole book/album)")
 async def upload_content_main_file(
@@ -328,137 +469,4 @@ async def upload_content_main_file(
 # are to be populated via direct uploads rather than just string URLs.
 # E.g., POST /{content_id}/chapters/{chapter_id}/upload-audio
 
-
-@router.post(
-    "/{content_id}/chapters/{chapter_id}/sections/", 
-    response_model=ContentSectionResponse, 
-    status_code=status.HTTP_201_CREATED
-)
-async def create_section_for_chapter(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID,
-    section_in: ContentSectionCreate,
-    #current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    # Verify chapter exists and belongs to content
-    chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
-    if not chapter or chapter.content_id != content_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to specified content")
-
-    # Permission check (similar to creating chapters)
-    parent_content = await content_crud.get_content(db, content_id=chapter.content_id)
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = parent_content and parent_content.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to add sections to this chapter")
-
-    try:
-        section = await content_section_crud.create_with_chapter_id(
-            db=db, obj_in=section_in, chapter_id=chapter_id
-        )
-    except Exception as e: # Catch potential UniqueConstraint for section_order
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not create section: {e}")
-    return section
-
-@router.get(
-    "/{content_id}/chapters/{chapter_id}/sections/", 
-    response_model=List[ContentSectionResponse]
-)
-async def list_sections_for_chapter(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=500),
-    db: AsyncSession = Depends(get_async_db)
-):
-    chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
-    if not chapter or chapter.content_id != content_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to specified content")
-
-    sections = await content_section_crud.get_sections_by_chapter_id(
-        db=db, chapter_id=chapter_id, skip=skip, limit=limit
-    )
-    return sections
-
-@router.get(
-    "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    response_model=ContentSectionResponse
-)
-async def get_specific_section(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID, # For verification
-    section_id: PyUUID,
-    db: AsyncSession = Depends(get_async_db)
-):
-    section = await content_section_crud.get_section(db=db, section_id=section_id)
-    if not section or section.chapter_id != chapter_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to specified chapter")
-    
-    # Verify chapter belongs to content (optional, good for consistency)
-    # chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=section.chapter_id)
-    # if not chapter or chapter.content_id != content_id:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent chapter/content mismatch")
-        
-    return section
-
-@router.put(
-    "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    response_model=ContentSectionResponse
-)
-async def update_specific_section(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID, # For verification
-    section_id: PyUUID,
-    section_in: ContentSectionUpdate,
-    #current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_section = await content_section_crud.get_section(db=db, section_id=section_id)
-    if not db_section or db_section.chapter_id != chapter_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to specified chapter")
-
-    # Permission check (similar to updating chapters)
-    parent_content = await content_crud.get_content(db, content_id=content_id) # Assuming chapter.content_id can be trusted
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = parent_content and parent_content.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to update this section")
-    
-    # Handle potential section_order change and collision
-    if section_in.section_order is not None and section_in.section_order != db_section.section_order:
-        existing_section_order = await content_section_crud.get_by_chapter_and_order(
-            db, chapter_id=chapter_id, section_order=section_in.section_order
-        )
-        if existing_section_order and existing_section_order.id != section_id : # if it's another section
-            raise HTTPException(status_code=400, detail=f"Section order {section_in.section_order} already exists in this chapter.")
-
-
-    updated_section = await content_section_crud.update(db=db, db_obj=db_section, obj_in=section_in)
-    return updated_section
-
-@router.delete(
-    "/{content_id}/chapters/{chapter_id}/sections/{section_id}", 
-    status_code=status.HTTP_204_NO_CONTENT
-)
-async def delete_specific_section(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID, # For verification
-    section_id: PyUUID,
-    #current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_section = await content_section_crud.get_section(db=db, section_id=section_id)
-    if not db_section or db_section.chapter_id != chapter_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to specified chapter")
-
-    # Permission check (similar to deleting chapters)
-    parent_content = await content_crud.get_content(db, content_id=content_id)
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = parent_content and parent_content.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to delete this section")
-    
-    await content_section_crud.remove(db=db, id=section_id)
-    return
 '''

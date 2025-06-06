@@ -21,7 +21,7 @@ class BookChapterUpdate(BaseModel):
 class BookChapterResponse(BookChapterBase):
     id: UUID
     book_id: UUID
-    sections: Optional[List[BookSectionResponse]] = [] # Added sections
+    #sections: Optional[List[BookSectionResponse]] = [] # Added sections
     created_at: datetime
     updated_at: datetime
 
