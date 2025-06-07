@@ -23,3 +23,28 @@ def upload_file_to_s3(file_obj, filename: str, content_type: str) -> str:
     return s3_url
 
 
+def generate_presigned_url(filename: str, content_type: str = "application/octet-stream", expires_in: int = 600) -> str:
+    """
+    Generate a presigned S3 URL that allows file upload directly to S3.
+    :param filename: The desired file name to store in S3
+    :param content_type: MIME type of the file
+    :param expires_in: How long (in seconds) the URL is valid. Default is 10 minutes.
+    :return: Presigned URL (string)
+    """
+    unique_filename = f"{uuid4()}_{filename}"
+    try:
+        url = s3_client.generate_presigned_url(
+            ClientMethod='put_object',
+            Params={
+                'Bucket': settings.AWS_S3_BUCKET_NAME,
+                'Key': unique_filename,
+                'ContentType': content_type,
+            },
+            ExpiresIn=expires_in,
+        )
+        return url
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate presigned URL: {e}")
+
+
+
