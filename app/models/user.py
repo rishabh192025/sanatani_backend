@@ -14,10 +14,10 @@ from app.database import Base # Corrected import
 
 # Enums
 class UserRole(PyEnum): # Keep Python Enum for direct use
-    ADMIN = "admin"
-    MODERATOR = "moderator"
-    USER = "user"
-    GUEST = "guest"
+    ADMIN = "ADMIN"
+    MODERATOR = "MODERATOR"
+    USER = "USER"
+    GUEST = "GUEST"
 
 class LanguageCode(PyEnum): # Keep Python Enum
     EN = "en"

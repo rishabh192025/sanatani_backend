@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.crud.base import CRUDBase
-from app.models.user import User
+from app.models.user import User, UserRole
+from datetime import datetime
 from app.schemas.user import UserCreate, UserUpdate
 from app.utils.security import get_password_hash
 
@@ -108,7 +109,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             last_name=clerk_data.get("last_name"),
             avatar_url=clerk_data.get("image_url"), # Clerk uses image_url or profile_image_url
             # Set default role or other app-specific fields
-            role=UserRole.USER, 
+            role=UserRole.USER.value, 
             is_active=True, # Assume active from Clerk
             is_verified=primary_email_obj.get("verification", {}).get("status") == "verified" if primary_email_obj else False,
             email_verified_at=datetime.fromtimestamp(primary_email_obj.get("verification").get("verified_at_server")) if primary_email_obj and primary_email_obj.get("verification", {}).get("status") == "verified" and primary_email_obj.get("verification").get("verified_at_server") else None,
