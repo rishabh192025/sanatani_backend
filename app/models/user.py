@@ -38,7 +38,7 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=True, index=True)
     clerk_user_id = Column(String(255), unique=True, nullable=False, index=True)
     phone_number = Column(String(20), unique=True, nullable=True)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)
     
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
@@ -58,9 +58,9 @@ class User(Base):
     timezone = Column(String(50), nullable=True)
     preferred_language = Column(String(50), default=LanguageCode.EN.value) # Use SQLAlchemyEnum here
     
-    role = Column(String(50), default=UserRole.USER.value, nullable=False) # Use SQLAlchemyEnum here
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False)
+    role = Column(String(50), default=UserRole.USER.value, nullable=True) # Use SQLAlchemyEnum here
+    is_active = Column(Boolean, default=True, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
     last_login_at = Column(DateTime, nullable=True)
     login_count = Column(Integer, default=0)
@@ -69,7 +69,7 @@ class User(Base):
     subscription_starts_at = Column(DateTime, nullable=True)
     subscription_ends_at = Column(DateTime, nullable=True)
     
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=True)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Renamed for clarity
 
