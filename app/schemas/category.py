@@ -1,43 +1,41 @@
-# app/schemas/category.py (New File - Placeholder)
+# app/schemas/category.py
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
+from app.models.category import CategoryScopeType # Import the new enum
 
 class CategoryBase(BaseModel):
-    name: str = Field(..., max_length=100)
-    slug: Optional[str] = Field(None, max_length=120, description="Auto-generated if not provided")
+    name: str = Field(..., min_length=2, max_length=100)
     description: Optional[str] = None
-    icon_url: Optional[HttpUrl] = None
-    color_code: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$") # Hex color
-    parent_id: Optional[str] = None # UUID as string
-    sort_order: int = 0
+    icon_url: Optional[str] = None
+    color_code: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+    type: str = CategoryScopeType.BOOK.value
+    parent_id: Optional[str] = None
     is_active: bool = True
+    is_featured: bool = False
 
 class CategoryCreate(CategoryBase):
     pass
 
 class CategoryUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
     description: Optional[str] = None
-    icon_url: Optional[HttpUrl] = None
+    icon_url: Optional[str] = None
     color_code: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
+    type: Optional[str] = None 
     parent_id: Optional[str] = None
-    sort_order: Optional[int] = None
     is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
 
-class CategoryResponse(CategoryBase):
+class CategoryResponse(CategoryBase): # Inherit from CategoryBase to get most fields
     id: UUID
-    # children: List['CategoryResponse'] = [] # For hierarchical display
-
+    type: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
 
-# For hierarchical display, Pydantic needs help with forward references
-# if CategoryResponse is used within itself for 'children'.
-# This is one way to do it after the class definition:
-# CategoryResponse.model_rebuild() 
-# Pydantic v2 handles this better with typing.List['CategoryResponse']
+# Resolve forward reference for children (Pydantic v2 handles this better, but good practice)
+# CategoryResponse.model_rebuild() # For Pydantic v1

@@ -1,5 +1,5 @@
 # app/crud/book_chapter.py
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -54,6 +54,40 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
             
         result = await db.execute(query)
         return result.scalars().all()
+
+    async def get_chapters_for_book_and_count( # Renamed and modified
+        self, 
+        db: AsyncSession, 
+        *, 
+        book_id: UUID, 
+        skip: int = 0, 
+        limit: int = 100, 
+        load_sections: bool = False
+    ) -> Tuple[List[BookChapter], int]: # Returns (list_of_chapters, total_count)
+        
+        # Base query for filtering
+        common_filters = [BookChapter.book_id == book_id]
+
+        # Count query
+        count_query = select(func.count(BookChapter.id)).select_from(BookChapter).where(*common_filters)
+        total_count_result = await db.execute(count_query)
+        total_count = total_count_result.scalar_one()
+
+        # Data query
+        data_query = (
+            select(self.model)
+            .where(*common_filters)
+            .order_by(BookChapter.chapter_number)
+            .offset(skip)
+            .limit(limit)
+        )
+        if load_sections:
+            data_query = data_query.options(selectinload(self.model.sections))
+            
+        data_result = await db.execute(data_query)
+        items = data_result.scalars().all()
+        
+        return items, total_count
 
     async def get_chapter_by_id(
         self, db: AsyncSession, *, chapter_id: UUID, book_id: Optional[UUID] = None, load_sections: bool = False

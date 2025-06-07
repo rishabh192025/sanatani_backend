@@ -228,7 +228,6 @@ async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return chapter
 
-# ... other chapter endpoints (GET list, GET single, PUT, DELETE) using book_chapter_crud ...
 # Example for GET single chapter:
 @router.get(
     "/{book_id}/chapters/{chapter_id}", 
@@ -249,25 +248,47 @@ async def get_specific_book_chapter_route(
 
 @router.get(
     "/{book_id}/chapters", 
-    response_model=List[BookChapterResponse]
+    response_model=PaginatedResponse[BookChapterResponse],
 )
-async def list_book_chapters_route(
+async def list_book_chapters_paginated_route( 
+    request: Request,
     book_id: PyUUID,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
+    include_sections: bool = Query(False, description="Whether to include sections for each chapter"),
     db: AsyncSession = Depends(get_async_db)
 ):
-    """
-    List all chapters for a specific book.
-    """
     book = await book_crud.get_book(db, content_id=book_id)
     if not book:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
 
-    chapters = await book_chapter_crud.get_chapters_for_book(
-        db=db, book_id=book_id, skip=skip, limit=limit
+    chapters, total_count = await book_chapter_crud.get_chapters_for_book_and_count(
+        db=db, book_id=book_id, skip=skip, limit=limit, load_sections=include_sections
     )
-    return chapters
+
+    # Construct next and previous page URLs
+    next_page = None
+    if (skip + limit) < total_count:
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_params["limit"] = str(limit)
+        next_page = str(request.url.replace_query_params(**next_params))
+
+    prev_page = None
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_params["limit"] = str(limit)
+        prev_page = str(request.url.replace_query_params(**prev_params))
+        
+    return PaginatedResponse[BookChapterResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=chapters # The items themselves
+    )
 
 @router.put(
     "/{book_id}/chapters/{chapter_id}",
@@ -363,26 +384,48 @@ async def get_specific_book_section_route(
 
 @router.get(
     "/{book_id}/chapters/{chapter_id}/sections", 
-    response_model=List[BookSectionResponse]
+    response_model=PaginatedResponse[BookSectionResponse],
 )
-async def list_book_sections_route( # Renamed for clarity
+async def list_book_sections_paginated_route(
+    request: Request,
     book_id: PyUUID,
     chapter_id: PyUUID,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
     db: AsyncSession = Depends(get_async_db)
 ):
-    """
-    List all sections for a specific chapter in a book.
-    """
+    # Verify chapter exists and belongs to the book
     chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
     if not chapter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
 
-    sections = await book_section_crud.get_sections_for_chapter(
+    sections, total_count = await book_section_crud.get_sections_for_chapter_and_count(
         db=db, chapter_id=chapter_id, skip=skip, limit=limit
     )
-    return sections
+
+    # Construct next and previous page URLs
+    next_page = None
+    if (skip + limit) < total_count:
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_params["limit"] = str(limit)
+        next_page = str(request.url.replace_query_params(**next_params))
+
+    prev_page = None
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_params["limit"] = str(limit)
+        prev_page = str(request.url.replace_query_params(**prev_params))
+        
+    return PaginatedResponse[BookSectionResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=sections
+    )
 
 
 @router.put(
