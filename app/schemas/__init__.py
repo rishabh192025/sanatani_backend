@@ -9,4 +9,6 @@ from .book_section import BookSectionBase, BookSectionCreate, BookSectionUpdate,
 # ...
 from .homepage import HomepageCard, HomepageCardsResponse
 from .category import CategoryBase, CategoryCreate, CategoryUpdate, CategoryResponse
+
+from .pagination import PaginatedResponse
 #from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse

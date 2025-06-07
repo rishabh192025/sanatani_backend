@@ -1,5 +1,5 @@
 # app/api/v1/book.py
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID as PyUUID
@@ -11,7 +11,8 @@ from app.dependencies import get_current_user, get_current_active_moderator_or_a
 from app.models.user import User
 from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
 from app.services.file_service import file_service
-
+from app.models.content import BookType as ModelBookTypeEnum # For mapping back in response
+from app.models.content import ContentType as ModelContentTypeEnum
 from app.crud.book_chapter import book_chapter_crud # New
 from app.crud.book_section import book_section_crud # New
 from app.schemas.book_chapter import (
@@ -24,38 +25,90 @@ from app.schemas.book_section import (
     BookSectionResponse,
     BookSectionUpdate
 )
+from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter()
 
-@router.get("", response_model=List[BookResponse], summary="List all books")
-async def list_all_books( # Renamed for clarity
-    skip: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
+@router.get("", response_model=PaginatedResponse[BookResponse], summary="List all books with pagination")
+async def list_all_books_paginated( # Renamed for clarity
+    request: Request, # Inject Request to build next/prev page URLs
+    skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
+    limit: int = Query(10, ge=1, le=100, description="Number of items per page"),
     category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
-    #book_type: Optional[str] = Query("TEXT", description="Filter by book type: TEXT, AUDIO"),
+    book_format: Optional[str] = Query(None, description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"), # TEXT, AUDIO, PDF
     db: AsyncSession = Depends(get_async_db)
 ):
-    # mapped_book_type = None
-    # if book_type:
-    #     try:
-    #         mapped_book_type = BookType[book_type.upper()]
-    #     except KeyError:
-    #         raise HTTPException(status_code=400, detail="Invalid book_type value")
+    content_type_filter = None
+    if book_format:
+        try:
+            # Map book_format (TEXT, AUDIO, PDF) to Content.content_type (BOOK, AUDIO, PDF_TYPE_IN_CONTENT_MODEL)
+            bf_upper = book_format.upper()
+            if bf_upper == ModelBookTypeEnum.AUDIO.value:
+                content_type_filter = ModelContentTypeEnum.AUDIO.value
+            elif bf_upper == ModelBookTypeEnum.PDF.value:
+                # Assuming you have a ContentTypeEnum.PDF or similar
+                # If ContentTypeEnum.BOOK is for text/pdf, adjust this logic
+                # For this example, let's assume ContentTypeEnum.BOOK handles text/pdf
+                content_type_filter = ModelContentTypeEnum.BOOK.value # Or a specific PDF type if you have it
+            elif bf_upper == ModelBookTypeEnum.TEXT.value:
+                content_type_filter = ModelContentTypeEnum.BOOK.value
+            else:
+                raise HTTPException(status_code=400, detail="Invalid book_format specified.")
+        except KeyError: # Should not happen if bf_upper matches ModelBookTypeEnum values
+             raise HTTPException(status_code=400, detail="Invalid book_format specified.")
 
-    contents = await book_crud.get_book_list(
+
+    books, total_count = await book_crud.get_book_list_and_count(
         db=db, 
         skip=skip, 
         limit=limit,
-        # book_type_filter=mapped_book_type, # Pass to CRUD
+        content_type_filter_str=content_type_filter, # Pass the determined content_type
         category_id_str=category_id,
         language_str=language,
         status_str=status_filter or ContentStatus.PUBLISHED.value,
         search_query=search
     )
-    return contents
+
+    response_items = []
+    for book_model in books:
+        derived_book_format = None
+        if book_model.content_type == ModelContentTypeEnum.AUDIO.value:
+            derived_book_format = ModelBookTypeEnum.AUDIO.value
+        elif book_model.content_type == ModelContentTypeEnum.BOOK.value:
+            derived_book_format = ModelBookTypeEnum.TEXT.value # Or PDF if that's the case
+        else:
+            derived_book_format = ModelBookTypeEnum.PDF.value
+        book_resp = BookResponse.model_validate(book_model) # Pydantic v2
+        book_resp.book_format = derived_book_format
+        response_items.append(book_resp)
+
+    # Construct next and previous page URLs
+    next_page = None
+    if (skip + limit) < total_count:
+        # Keep existing query params for the next page URL
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_params["limit"] = str(limit)
+        next_page = str(request.url.replace_query_params(**next_params))
+
+    prev_page = None
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_params["limit"] = str(limit)
+        prev_page = str(request.url.replace_query_params(**prev_params))
+        
+    return PaginatedResponse[BookResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=response_items
+    )
 
 @router.get("/{content_id_or_slug}", response_model=BookResponse)
 async def get_single_book( # Renamed
@@ -148,14 +201,11 @@ async def delete_existing_book( # Renamed
     await book_crud.remove(db=db, id=content_id)
     return # No content response for 204
 
-# --- Book Chapter Endpoints ---
-BOOK_CHAPTER_TAG = "Book Chapters"
 
 @router.post(
     "/{book_id}/chapters", 
     response_model=BookChapterResponse, 
-    status_code=status.HTTP_201_CREATED,
-    tags=[BOOK_CHAPTER_TAG]
+    status_code=status.HTTP_201_CREATED
 )
 async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
     book_id: PyUUID,
@@ -182,8 +232,7 @@ async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
 # Example for GET single chapter:
 @router.get(
     "/{book_id}/chapters/{chapter_id}", 
-    response_model=BookChapterResponse,
-    tags=[BOOK_CHAPTER_TAG]
+    response_model=BookChapterResponse
 )
 async def get_specific_book_chapter_route(
     book_id: PyUUID,
@@ -200,8 +249,7 @@ async def get_specific_book_chapter_route(
 
 @router.get(
     "/{book_id}/chapters", 
-    response_model=List[BookChapterResponse],
-    tags=[BOOK_CHAPTER_TAG]
+    response_model=List[BookChapterResponse]
 )
 async def list_book_chapters_route(
     book_id: PyUUID,
@@ -223,8 +271,7 @@ async def list_book_chapters_route(
 
 @router.put(
     "/{book_id}/chapters/{chapter_id}",
-    response_model=BookChapterResponse,
-    tags=[BOOK_CHAPTER_TAG]
+    response_model=BookChapterResponse
 )
 async def update_book_chapter_route(
     book_id: PyUUID,
@@ -250,8 +297,7 @@ async def update_book_chapter_route(
     return updated_chapter
 @router.delete(
     "/{book_id}/chapters/{chapter_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=[BOOK_CHAPTER_TAG]
+    status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_book_chapter_route(
     book_id: PyUUID,
@@ -270,14 +316,10 @@ async def delete_book_chapter_route(
     return # No content response for 204
 
 
-# --- Book Section Endpoints ---
-BOOK_SECTION_TAG = "Book Sections"
-
 @router.post(
     "/{book_id}/chapters/{chapter_id}/sections", 
     response_model=BookSectionResponse, 
-    status_code=status.HTTP_201_CREATED,
-    tags=[BOOK_SECTION_TAG]
+    status_code=status.HTTP_201_CREATED
 )
 async def create_section_for_book_chapter_route(
     book_id: PyUUID, 
@@ -301,11 +343,10 @@ async def create_section_for_book_chapter_route(
     except ValueError as e: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not create section: {str(e)}")
     return section
-# ... other section endpoints (GET list, GET single, PUT, DELETE) using book_section_crud ...
+
 @router.get(
     "/{book_id}/chapters/{chapter_id}/sections/{section_id}", 
-    response_model=BookSectionResponse,
-    tags=[BOOK_SECTION_TAG]
+    response_model=BookSectionResponse
 )
 async def get_specific_book_section_route(
     book_id: PyUUID,
@@ -322,8 +363,7 @@ async def get_specific_book_section_route(
 
 @router.get(
     "/{book_id}/chapters/{chapter_id}/sections", 
-    response_model=List[BookSectionResponse],
-    tags=[BOOK_SECTION_TAG]
+    response_model=List[BookSectionResponse]
 )
 async def list_book_sections_route( # Renamed for clarity
     book_id: PyUUID,
@@ -347,8 +387,7 @@ async def list_book_sections_route( # Renamed for clarity
 
 @router.put(
     "/{book_id}/chapters/{chapter_id}/sections/{section_id}",
-    response_model=BookSectionResponse,
-    tags=[BOOK_SECTION_TAG]
+    response_model=BookSectionResponse
 )
 async def update_book_section_route(
     book_id: PyUUID,
@@ -376,8 +415,7 @@ async def update_book_section_route(
 
 @router.delete(
     "/{book_id}/chapters/{chapter_id}/sections/{section_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=[BOOK_SECTION_TAG]
+    status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_book_section_route(
     book_id: PyUUID,
@@ -395,78 +433,3 @@ async def delete_book_section_route(
     
     await book_section_crud.remove(db=db, id=section_id)
     return
-
-
-
-
-'''
-@router.post("/{content_id}/upload-file", summary="Upload a primary file for content (e.g., PDF, MP3)")
-async def upload_content_main_file( # Renamed for clarity
-    content_id: PyUUID,
-    file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user), # Granular check below
-    db: AsyncSession = Depends(get_async_db) # Changed
-):
-    """
-    Upload a main file associated with a content item.
-    Requires Admin, Moderator, or content author.
-    """
-    db_content = await content_crud.get_content(db, content_id=content_id)
-    if not db_content:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = db_content.author_id == current_user.id
-    
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    
-    # Use file_service to handle the upload
-    # This service would save the file, potentially to S3 or local storage,
-    # and then update the db_content.file_url and db_content.file_size
-    try:
-        file_url, file_size = await file_service.upload_content_file(
-            db=db, 
-            content_obj=db_content, 
-            file=file, 
-            upload_dir_prefix="content_files"
-        )
-        # The file_service should commit the changes to db_content
-        return {"message": "File uploaded successfully", "file_url": file_url, "file_size": file_size}
-    except Exception as e:
-        # Log the exception
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
-
-# Add similar endpoints for cover_image_url and thumbnail_url if direct upload is desired for them too.
-
-# --- File Upload Endpoint for Content (main file, not chapter specific audio/video) ---
-@router.post("/{content_id}/upload-main-file", summary="Upload a primary file for content (e.g., PDF, MP3 for whole book/album)")
-async def upload_content_main_file(
-    content_id: PyUUID,
-    file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_content = await content_crud.get_content(db, content_id=content_id)
-    if not db_content:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = db_content.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    
-    try:
-        # This updates content_obj.file_url and file_size
-        file_url, file_size = await file_service.upload_content_file(
-            db=db, content_obj=db_content, file=file, upload_dir_prefix="content_main_files"
-        )
-        return {"message": "Main content file uploaded successfully", "file_url": file_url, "file_size_bytes": file_size}
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
-
-# You would need similar upload endpoints for chapter-specific audio/video if ContentChapter.audio_url etc.
-# are to be populated via direct uploads rather than just string URLs.
-# E.g., POST /{content_id}/chapters/{chapter_id}/upload-audio
-
-'''

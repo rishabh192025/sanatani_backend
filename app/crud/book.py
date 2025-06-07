@@ -1,5 +1,6 @@
 # app/crud/book.py
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from sqlalchemy import func
 from uuid import UUID as PyUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -137,6 +138,71 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         query = query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
+
+    async def get_book_list_and_count( # Renamed and modified
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 10,
+        content_type_filter_str: Optional[str] = None,
+        category_id_str: Optional[str] = None,
+        language_str: Optional[str] = None,
+        status_str: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> Tuple[List[Content], int]: # Returns (list_of_books, total_count)
+        
+        # Base query for filtering
+        count_query = select(func.count(Content.id)).select_from(Content)
+        data_query = select(Content)
+
+        # Apply common filters to both queries
+        filters = [Content.sub_type == ContentSubType.BOOK.value] # Core filter for all books
+
+        if content_type_filter_str:
+            try:
+                ct_enum_val = ContentTypeEnum[content_type_filter_str.upper()].value
+                filters.append(Content.content_type == ct_enum_val)
+            except KeyError:
+                # Handle invalid content_type, maybe raise error or ignore
+                pass 
+        
+        if category_id_str:
+            try:
+                cat_uuid = PyUUID(category_id_str)
+                filters.append(Content.category_id == cat_uuid)
+            except ValueError:
+                pass
+        if language_str:
+            try:
+                lang_enum_val = LanguageCodeEnum[language_str.upper()].value
+                filters.append(Content.language == lang_enum_val)
+            except KeyError:
+                pass
+        if status_str:
+            try:
+                status_enum_val = ContentStatus[status_str.upper()].value
+                filters.append(Content.status == status_enum_val)
+            except KeyError:
+                pass
+        if search_query:
+            search_term = f"%{search_query}%"
+            filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
+
+        if filters:
+            count_query = count_query.where(*filters)
+            data_query = data_query.where(*filters)
+
+        # Get total count
+        total_count_result = await db.execute(count_query)
+        total_count = total_count_result.scalar_one()
+
+        # Get paginated data
+        data_query = data_query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
+        data_result = await db.execute(data_query)
+        items = data_result.scalars().all()
+        
+        return items, total_count
 
     async def get_book_by_slug(
         self, 
