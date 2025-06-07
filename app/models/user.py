@@ -56,9 +56,9 @@ class User(Base):
     state_province = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     timezone = Column(String(50), nullable=True)
-    preferred_language = Column(SQLAlchemyEnum(LanguageCode), default=LanguageCode.EN) # Use SQLAlchemyEnum here
+    preferred_language = Column(String(50), default=LanguageCode.EN.value) # Use SQLAlchemyEnum here
     
-    role = Column(SQLAlchemyEnum(UserRole), default=UserRole.USER, nullable=False) # Use SQLAlchemyEnum here
+    role = Column(String(50), default=UserRole.USER.value, nullable=False) # Use SQLAlchemyEnum here
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     email_verified_at = Column(DateTime, nullable=True)
