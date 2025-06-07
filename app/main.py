@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.api.v1 import (
-    auth, users, homepage, 
-    place, webhooks, book
-    )
+    auth, users, homepage,
+    place, webhooks, book, s3_upload
+)
      # , admin, places, calendar # Placeholder for future routers
 
 from app.config import settings
@@ -58,6 +58,7 @@ app.include_router(homepage.router, prefix="/api/v1/homepage", tags=["Homepage F
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
 app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
+app.include_router(s3_upload.router, prefix="/api/v1/s3_upload", tags=["S3 Upload"])
 
 @app.get("/", tags=["Root"])
 async def root():
