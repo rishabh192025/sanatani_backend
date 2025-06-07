@@ -45,8 +45,8 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         db: AsyncSession, 
         *, 
         type: str, # Use your enum type
-        skip: int = 0, 
-        limit: int = 100,
+        #skip: int = 0, 
+        #limit: int = 100,
         parent_id: Optional[PyUUID] = None,
         #load_children: bool = False, # Defaulting to True for this example to fix the error
         is_active: Optional[bool] = True
@@ -77,7 +77,7 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         # if load_children:
         #     data_query = data_query.options(selectinload(Category.children))
 
-        data_query = data_query.order_by(Category.sort_order, Category.name).offset(skip).limit(limit)
+        data_query = data_query.order_by(Category.sort_order, Category.name)
         
         data_result = await db.execute(data_query)
         items = data_result.scalars().unique().all() # .unique() is good with selectinload

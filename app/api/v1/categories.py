@@ -59,8 +59,8 @@ async def list_categories_by_type(
         db=db, 
         type=type, # Pass the enum member directly
         parent_id=parent_uuid,
-        skip=skip, 
-        limit=limit,
+        #skip=skip, 
+        #limit=limit,
         is_active=is_active,
         #load_children=load_children_in_list # Use the query param
     )
