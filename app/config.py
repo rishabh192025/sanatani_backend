@@ -4,10 +4,9 @@ from typing import List, Optional # Added Optional
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str ="postgresql://postgres:sanatani_db@sanatanidb.criqcqc42dui.eu-north-1.rds.amazonaws.com:5432/sanatani_db"
+    DATABASE_URL: str = ""
     # Async Database URL
-    #DATABASE_URL_ASYNC: str ="postgresql+asyncpg://postgres:sanatani_db@sanatanidb.criqcqc42dui.eu-north-1.rds.amazonaws.com:5432/sanatani_db"
-    DATABASE_URL_ASYNC: str ="postgresql+asyncpg://postgres:sanatani_db@127.0.0.1:6432/sanatani_db"
+    DATABASE_URL_ASYNC: str =""
     # Security
     SECRET_KEY: str = "your-secret-key-here-please-change-me" # Make sure to change this
     ALGORITHM: str = "HS256"
@@ -25,7 +24,7 @@ class Settings(BaseSettings):
     # External Services (Placeholders - fill in .env)
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
-    AWS_REGION: Optional[str] = "us-east-1"
+    AWS_REGION: Optional[str] = None
     AWS_S3_BUCKET_NAME: Optional[str] = None # Renamed for clarity
     
     # Email (Placeholders - fill in .env)

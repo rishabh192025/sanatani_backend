@@ -27,6 +27,7 @@ class ContentType(PyEnum): # Renamed from ContentEntityType for brevity
     AUDIO = "AUDIO"
     VIDEO = "VIDEO"
     ARTICLE = "ARTICLE"
+    PDF = "PDF"  # For e-books, PDFs, etc.
     PODCAST_SERIES = "PODCAST_SERIES" # A series, episodes would be chapters/sections or related content
     DIGITAL_TEXT = "DIGITAL_TEXT" # For scriptures, manuscripts if distinct from book/article
     # Add more as needed
@@ -130,7 +131,7 @@ class BookChapter(Base):
     __tablename__ = "book_chapters"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    content_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
+    book_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
     title = Column(String(300), nullable=False)
     chapter_number = Column(Integer, nullable=False)
     description = Column(Text, nullable=True) # Optional summary for the chapter itself
@@ -151,8 +152,9 @@ class BookChapter(Base):
         order_by="BookSection.section_order"
     )
     __table_args__ = (
-        UniqueConstraint('content_id', 'chapter_number', name='uq_book_chapter_number'),
-        Index('idx_book_chapter_content_id_chapter_number', 'content_id', 'chapter_number'),
+        UniqueConstraint('book_id', 'chapter_number', name='uq_book_chapter_number'),
+        # FIX THIS LINE: Change 'content_id' to 'book_id'
+        Index('idx_book_chapter_book_id_chapter_number', 'book_id', 'chapter_number'),
     )
 
     def __repr__(self):

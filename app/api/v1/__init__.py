@@ -10,6 +10,7 @@ from . import book
 
 from . import place
 from . import webhooks
+from . import categories
 
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])

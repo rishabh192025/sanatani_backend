@@ -1,6 +1,7 @@
+#
 import boto3
 from uuid import uuid4
-
+from urllib.parse import quote_plus
 from app.config import settings
 
 
@@ -11,7 +12,7 @@ s3_client = boto3.client(
     region_name=settings.AWS_REGION,
 )
 
-def upload_file_to_s3(file_obj, filename: str, content_type: str) -> str:
+def upload_file_to_s3(file_obj, filename: str, content_type: str = "application/octet-stream") -> str:
     unique_filename = f"{uuid4()}_{filename}"
     s3_client.upload_fileobj(
         file_obj,
@@ -19,7 +20,8 @@ def upload_file_to_s3(file_obj, filename: str, content_type: str) -> str:
         unique_filename,
         ExtraArgs={"ContentType": content_type},
     )
-    s3_url = f"https://{settings.AWS_S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{unique_filename}"
+    encoded_filename = quote_plus(unique_filename)
+    s3_url = f"https://{settings.AWS_S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{encoded_filename}"
     return s3_url
 
 
@@ -45,6 +47,3 @@ def generate_presigned_url(filename: str, content_type: str = "application/octet
         return url
     except Exception as e:
         raise RuntimeError(f"Failed to generate presigned URL: {e}")
-
-
-

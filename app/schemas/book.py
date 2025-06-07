@@ -43,7 +43,8 @@ class BookResponse(BookBase):
     id: UUID
     slug: str
     author_name: Optional[str] = None
-    category_id: Optional[str] = None
+    category_id: Optional[str] = None # Or UUID if you prefer consistency with id
+    book_format: Optional[str] = None # e.g., "TEXT", "AUDIO", "PDF"
     status: str
     published_at: Optional[datetime] = None
     featured: bool
@@ -53,7 +54,8 @@ class BookResponse(BookBase):
     bookmark_count: int
     average_rating: Optional[float] = None
     review_count: int
-    page_count: Optional[int] = None # Overall page count (e.g., for books)
+    page_count: Optional[int] = None
+    duration: Optional[int] = None # Useful for audio books
     created_at: datetime
     updated_at: datetime
     
