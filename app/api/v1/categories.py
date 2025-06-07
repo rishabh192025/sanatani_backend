@@ -34,7 +34,7 @@ async def create_new_category(
 
 @router.get(
     "", 
-    response_model=PaginatedResponse[CategoryResponse], 
+    response_model=List[CategoryResponse], 
     tags=[CATEGORY_TAG],
     summary="List categories by type"
 )
@@ -68,7 +68,7 @@ async def list_categories_by_type(
     for cat_model in categories:
 
         response_items.append(CategoryResponse.model_validate(cat_model))
-    
+    '''
     next_page = None
     if (skip + limit) < total_count:
         next_params = request.query_params._dict.copy()
@@ -91,7 +91,8 @@ async def list_categories_by_type(
         prev_page=prev_page,
         items=response_items
     )
-
+    '''
+    return response_items
 @router.get(
     "/{category_id_or_slug}", 
     response_model=CategoryResponse, 
