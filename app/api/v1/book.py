@@ -112,9 +112,9 @@ async def list_all_books_paginated( # Renamed for clarity
     )
 
 @router.get("/{content_id_or_slug}", response_model=BookResponse)
-async def get_single_book( # Renamed
+async def get_single_book(
     content_id_or_slug: str,
-    db: AsyncSession = Depends(get_async_db) # Changed
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Get a specific content item by its UUID or slug.
@@ -127,15 +127,23 @@ async def get_single_book( # Renamed
     except ValueError:
         # If not a valid UUID, assume it's a slug
         content = await book_crud.get_book_by_slug(db=db, slug=content_id_or_slug)
-    
+
     if not content:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-    
-    # Add access control: e.g., only show PUBLISHED content to non-admins/non-authors
-    # or if content.status != ContentStatus.PUBLISHED and not (current_user and (current_user.role in [UserRole.ADMIN] or content.author_id == current_user.id)):
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found or not accessible")
-    
-    return content
+
+    derived_book_format = None
+    if content.content_type == ModelContentTypeEnum.AUDIO.value:
+        derived_book_format = ModelBookTypeEnum.AUDIO.value
+    elif content.content_type == ModelContentTypeEnum.BOOK.value:
+        derived_book_format = ModelBookTypeEnum.TEXT.value # Or PDF if that's the case
+    else:
+        derived_book_format = ModelBookTypeEnum.PDF.value
+    book_resp = BookResponse.model_validate(content) # Pydantic v2
+
+    book_resp.book_format = derived_book_format
+
+    return book_resp
+
 
 @router.post("",response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_book( # Renamed
