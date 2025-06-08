@@ -85,7 +85,7 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
             data_query = data_query.options(selectinload(self.model.sections))
             
         data_result = await db.execute(data_query)
-        items = data_result.scalars().all()
+        items = data_result.scalars().unique().all()
         
         return items, total_count
 

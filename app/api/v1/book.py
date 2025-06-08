@@ -1,7 +1,7 @@
 # app/api/v1/book.py
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import List, Optional, Any
 from uuid import UUID as PyUUID
 
 from app.database import get_async_db
@@ -18,12 +18,18 @@ from app.crud.book_section import book_section_crud # New
 from app.schemas.book_chapter import (
     BookChapterCreate, # Using specific if you keep them separate
     BookChapterResponse,
-    BookChapterUpdate
+    BookChapterUpdate, BookChapterResponseWithoutSections
+
 )
 from app.schemas.book_section import (
     BookSectionCreate,
     BookSectionResponse,
     BookSectionUpdate
+)
+from app.schemas.book_toc import (
+    BookTableOfContentsResponse,
+    TOCChapterItem,
+    TOCSectionItem
 )
 from app.schemas.pagination import PaginatedResponse
 
@@ -213,7 +219,7 @@ async def delete_existing_book( # Renamed
 
 @router.post(
     "/{book_id}/chapters", 
-    response_model=BookChapterResponse, 
+    response_model=BookChapterResponseWithoutSections, 
     status_code=status.HTTP_201_CREATED
 )
 async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
@@ -228,19 +234,19 @@ async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
 
     # Permission check (e.g., Admin, Moderator, or Author of the book)
     # ... (implement your permission logic)
-
+    print(book)
     try:
         chapter = await book_chapter_crud.create_for_book( # Use book_chapter_crud
             db=db, obj_in=chapter_in, book_id=book_id
         )
+        print(chapter)
     except ValueError as e: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return chapter
 
 # Example for GET single chapter:
 @router.get(
-    "/{book_id}/chapters/{chapter_id}", 
-    response_model=BookChapterResponse
+    "/{book_id}/chapters/{chapter_id}"
 )
 async def get_specific_book_chapter_route(
     book_id: PyUUID,
@@ -253,11 +259,29 @@ async def get_specific_book_chapter_route(
     )
     if not chapter: # get_chapter_by_id already checks book_id match if provided
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found for this book")
-    return chapter
+    if include_sections:
 
+        return  BookChapterResponse(
+            id=chapter.id,
+            title=chapter.title,
+            chapter_number=chapter.chapter_number,
+            sections=chapter.sections,
+            book_id=chapter.book_id,
+            created_at=chapter.created_at,
+            updated_at=chapter.updated_at
+        )
+    else:
+        return BookChapterResponseWithoutSections(
+            id=chapter.id,
+            title=chapter.title,
+            chapter_number=chapter.chapter_number,
+            book_id=chapter.book_id,
+            created_at=chapter.created_at,
+            updated_at=chapter.updated_at
+        )
 @router.get(
     "/{book_id}/chapters", 
-    response_model=PaginatedResponse[BookChapterResponse],
+    response_model=PaginatedResponse[Any],
 )
 async def list_book_chapters_paginated_route( 
     request: Request,
@@ -274,7 +298,7 @@ async def list_book_chapters_paginated_route(
     chapters, total_count = await book_chapter_crud.get_chapters_for_book_and_count(
         db=db, book_id=book_id, skip=skip, limit=limit, load_sections=include_sections
     )
-
+    
     # Construct next and previous page URLs
     next_page = None
     if (skip + limit) < total_count:
@@ -289,15 +313,25 @@ async def list_book_chapters_paginated_route(
         prev_params["skip"] = str(max(0, skip - limit))
         prev_params["limit"] = str(limit)
         prev_page = str(request.url.replace_query_params(**prev_params))
-        
-    return PaginatedResponse[BookChapterResponse](
-        total_count=total_count,
-        limit=limit,
-        skip=skip,
-        next_page=next_page,
-        prev_page=prev_page,
-        items=chapters # The items themselves
-    )
+    if include_sections:
+
+        return PaginatedResponse[BookChapterResponse](
+            total_count=total_count,
+            limit=limit,
+            skip=skip,
+            next_page=next_page,
+            prev_page=prev_page,
+            items=chapters # The items themselves
+        )
+    else:
+        return PaginatedResponse[BookChapterResponseWithoutSections](
+            total_count=total_count,
+            limit=limit,
+            skip=skip,
+            next_page=next_page,
+            prev_page=prev_page,
+            items=chapters # The items themselves
+        )
 
 @router.put(
     "/{book_id}/chapters/{chapter_id}",
@@ -325,6 +359,7 @@ async def update_book_chapter_route(
     except ValueError as e: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return updated_chapter
+
 @router.delete(
     "/{book_id}/chapters/{chapter_id}",
     status_code=status.HTTP_204_NO_CONTENT
@@ -343,8 +378,7 @@ async def delete_book_chapter_route(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
     
     await book_chapter_crud.remove(db=db, id=chapter_id)
-    return # No content response for 204
-
+    return
 
 @router.post(
     "/{book_id}/chapters/{chapter_id}/sections", 
@@ -436,7 +470,6 @@ async def list_book_sections_paginated_route(
         items=sections
     )
 
-
 @router.put(
     "/{book_id}/chapters/{chapter_id}/sections/{section_id}",
     response_model=BookSectionResponse
@@ -485,3 +518,50 @@ async def delete_book_section_route(
     
     await book_section_crud.remove(db=db, id=section_id)
     return
+
+@router.get(
+    "/{book_id}/toc", 
+    response_model=BookTableOfContentsResponse
+)
+async def get_book_table_of_contents_route(
+    book_id: PyUUID,
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get the table of contents for a book: a list of chapters with their sections (IDs and titles).
+    """
+    book_with_structure = await book_crud.get_book_table_of_contents(db=db, book_id=book_id)
+
+    if not book_with_structure:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+
+    # Manually construct the TOC response to ensure only desired fields
+    # Pydantic schemas TOCChapterItem and TOCSectionItem will handle this if mapping correctly
+    
+    toc_chapters = []
+    if book_with_structure.chapters: # Check if chapters were loaded and exist
+        for chapter_model in sorted(book_with_structure.chapters, key=lambda c: c.chapter_number):
+            toc_sections = []
+            if chapter_model.sections: # Check if sections were loaded and exist
+                for section_model in sorted(chapter_model.sections, key=lambda s: s.section_order):
+                    toc_sections.append(
+                        TOCSectionItem(
+                            id=section_model.id,
+                            title=section_model.title,
+                            section_order=section_model.section_order
+                        )
+                    )
+            toc_chapters.append(
+                TOCChapterItem(
+                    id=chapter_model.id,
+                    title=chapter_model.title,
+                    chapter_number=chapter_model.chapter_number,
+                    sections=toc_sections
+                )
+            )
+            
+    return BookTableOfContentsResponse(
+        book_id=book_with_structure.id,
+        book_title=book_with_structure.title,
+        chapters=toc_chapters
+    )
