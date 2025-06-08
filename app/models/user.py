@@ -20,14 +20,19 @@ class UserRole(PyEnum): # Keep Python Enum for direct use
     GUEST = "GUEST"
 
 class LanguageCode(PyEnum): # Keep Python Enum
-    EN = "en"
-    HI = "hi"
-    SA = "sa"
-    BN = "bn"
-    TA = "ta"
-    TE = "te"
-    MR = "mr"
-    GU = "gu"
+    EN = "EN"
+    HI = "HI"
+    SA = "AS"
+    BN = "BN"
+    TA = "TA"
+    TE = "TE"
+    MR = "MR"
+    GU = "GU"
+    KA = "KA"
+    ML = "ML"
+    OR = "OR"
+    PA = "PA"
+    UR = "UR"
 
 class User(Base):
     __tablename__ = "users"
@@ -56,9 +61,9 @@ class User(Base):
     state_province = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     timezone = Column(String(50), nullable=True)
-    preferred_language = Column(String(50), default=LanguageCode.EN.value) # Use SQLAlchemyEnum here
+    preferred_language = Column(String(50), default=LanguageCode.EN.value)
     
-    role = Column(String(50), default=UserRole.USER.value, nullable=True) # Use SQLAlchemyEnum here
+    role = Column(String(50), default=UserRole.USER.value, nullable=True)
     is_active = Column(Boolean, default=True, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
@@ -71,7 +76,7 @@ class User(Base):
     
     created_at = Column(DateTime, default=func.now(), nullable=True)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Renamed for clarity
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Relationships - Add other models as they are created
     # created_content = relationship("Content", back_populates="author", foreign_keys="Content.author_id") # Example

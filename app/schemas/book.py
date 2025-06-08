@@ -43,7 +43,7 @@ class BookResponse(BookBase):
     id: UUID
     slug: str
     author_name: Optional[str] = None
-    category_id: Optional[str] = None # Or UUID if you prefer consistency with id
+    category_id: Optional[UUID] = None # Or UUID if you prefer consistency with id
     book_format: Optional[str] = None # e.g., "TEXT", "AUDIO", "PDF"
     status: str
     published_at: Optional[datetime] = None

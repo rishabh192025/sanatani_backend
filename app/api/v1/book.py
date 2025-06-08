@@ -82,6 +82,7 @@ async def list_all_books_paginated( # Renamed for clarity
         else:
             derived_book_format = ModelBookTypeEnum.PDF.value
         book_resp = BookResponse.model_validate(book_model) # Pydantic v2
+
         book_resp.book_format = derived_book_format
         response_items.append(book_resp)
 
