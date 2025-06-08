@@ -264,6 +264,7 @@ async def get_specific_book_chapter_route(
         return  BookChapterResponse(
             id=chapter.id,
             title=chapter.title,
+            description=chapter.description,
             chapter_number=chapter.chapter_number,
             sections=chapter.sections,
             book_id=chapter.book_id,
@@ -274,6 +275,7 @@ async def get_specific_book_chapter_route(
         return BookChapterResponseWithoutSections(
             id=chapter.id,
             title=chapter.title,
+            description=chapter.description,
             chapter_number=chapter.chapter_number,
             book_id=chapter.book_id,
             created_at=chapter.created_at,
