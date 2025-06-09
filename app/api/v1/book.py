@@ -261,26 +261,10 @@ async def get_specific_book_chapter_route(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found for this book")
     if include_sections:
 
-        return  BookChapterResponse(
-            id=chapter.id,
-            title=chapter.title,
-            description=chapter.description,
-            chapter_number=chapter.chapter_number,
-            sections=chapter.sections,
-            book_id=chapter.book_id,
-            created_at=chapter.created_at,
-            updated_at=chapter.updated_at
-        )
+        return  BookChapterResponse.model_validate(chapter) 
     else:
-        return BookChapterResponseWithoutSections(
-            id=chapter.id,
-            title=chapter.title,
-            description=chapter.description,
-            chapter_number=chapter.chapter_number,
-            book_id=chapter.book_id,
-            created_at=chapter.created_at,
-            updated_at=chapter.updated_at
-        )
+        return BookChapterResponseWithoutSections.model_validate(chapter) 
+
 @router.get(
     "/{book_id}/chapters", 
     response_model=PaginatedResponse[Any],

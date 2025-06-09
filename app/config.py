@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS
-    ALLOWED_HOSTS: List[str] = ["http://localhost:3000", "http://localhost:8000"] # Added localhost:8000 for backend dev
+    ALLOWED_HOSTS: List[str] = ["http://localhost:3000", "http://localhost:8000","https://project-guruji-2or4.vercel.app"] # Added localhost:8000 for backend dev
     
     # File Storage
     UPLOAD_DIR: str = "uploads"
