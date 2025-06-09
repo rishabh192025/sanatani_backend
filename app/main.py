@@ -42,7 +42,7 @@ app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
 # Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.ALLOWED_HOSTS] if settings.ALLOWED_HOSTS else ["*"],
+    allow_origins=[str(origin) for origin in ["http://localhost:3000", "http://localhost:8000","https://project-guruji-2or4.vercel.app"]] if ["http://localhost:3000", "http://localhost:8000","https://project-guruji-2or4.vercel.app"] else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
