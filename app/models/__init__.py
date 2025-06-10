@@ -4,7 +4,7 @@ from app.database import Base
 from .user import User, UserRole, LanguageCode
 from .category import Category
 
-from .place import SacredPlace
+from .place import Place
 
 from .content import Content, ContentType, ContentStatus, ContentChapter, ContentSection
 
