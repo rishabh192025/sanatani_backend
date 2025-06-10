@@ -15,13 +15,13 @@ HOMEPAGE_CARDS_DATA = [
         "title": "Sacred Books",
         "description": "Access a collection of spiritual texts and e-books.",
         "icon": "icon-book-open-outline", # Example icon name
-        "link": "/content/books" # Example frontend link
+        "link": "/books" # Example frontend link
     },
     {
         "title": "Audiobooks",
         "description": "Listen to spiritual teachings and sacred texts.",
         "icon": "icon-headphones-outline",
-        "link": "/content/audiobooks"
+        "link": "/audiobooks"
     },
     {
         "title": "Lost Heritage",
