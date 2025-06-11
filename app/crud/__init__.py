@@ -5,6 +5,8 @@ from .user import user_crud
 from .book import book_crud
 from .book_chapter import book_chapter_crud
 from .book_section import book_section_crud
+from .story import story_crud
+from .teaching import teaching_crud
 # ...
 from .category import category_crud
 
