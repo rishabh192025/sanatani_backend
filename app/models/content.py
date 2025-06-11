@@ -27,6 +27,7 @@ class ContentType(PyEnum): # Renamed from ContentEntityType for brevity
     AUDIO = "AUDIO"
     VIDEO = "VIDEO"
     ARTICLE = "ARTICLE"
+    PDF_DOCUMENT = "PDF_DOCUMENT" # For BookType.PDF (no chapters/sections, u
     PDF = "PDF"  # For e-books, PDFs, etc.
     PODCAST_SERIES = "PODCAST_SERIES" # A series, episodes would be chapters/sections or related content
     DIGITAL_TEXT = "DIGITAL_TEXT" # For scriptures, manuscripts if distinct from book/article
@@ -45,8 +46,9 @@ class ContentSubType(PyEnum): # New Enum for more specific classification
 
 class BookType(PyEnum):
     TEXT = "TEXT"  # For e-books, PDFs, etc.
-    PDF = "PDF"  # For audiobooks
+    PDF = "PDF"  # For e-books, PDFs, etc.
     AUDIO = "AUDIO"  # For audiobooks, podcasts, etc.
+    VIDEO = "VIDEO"  # For video content
 
 
 class Content(Base):

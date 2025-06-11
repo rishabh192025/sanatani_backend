@@ -23,7 +23,7 @@ class BookCreate(BookBase):
     author_name: Optional[str] = Field(None, max_length=200) 
     status: Optional[str] = ContentStatus.PUBLISHED.value
     featured: Optional[bool] = False
-    book_type : Optional[BookType] = BookType.TEXT
+    book_type : Optional[BookType] = None
 
 class BookUpdate(BaseModel): # Does not inherit BookBase
     title: Optional[str] = Field(None, min_length=3, max_length=300)
@@ -44,7 +44,7 @@ class BookResponse(BookBase):
     slug: str
     author_name: Optional[str] = None
     category_id: Optional[UUID] = None # Or UUID if you prefer consistency with id
-    book_format: Optional[str] = None # e.g., "TEXT", "AUDIO", "PDF"
+    book_format: Optional[str] = None # e.g., "TEXT", "AUDIO", "PDF", "VIDEO"
     status: str
     published_at: Optional[datetime] = None
     featured: bool

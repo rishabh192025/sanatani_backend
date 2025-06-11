@@ -58,9 +58,11 @@ async def list_all_books_paginated( # Renamed for clarity
                 # Assuming you have a ContentTypeEnum.PDF or similar
                 # If ContentTypeEnum.BOOK is for text/pdf, adjust this logic
                 # For this example, let's assume ContentTypeEnum.BOOK handles text/pdf
-                content_type_filter = ModelContentTypeEnum.BOOK.value # Or a specific PDF type if you have it
+                content_type_filter = ModelContentTypeEnum.PDF.value # Or a specific PDF type if you have it
             elif bf_upper == ModelBookTypeEnum.TEXT.value:
                 content_type_filter = ModelContentTypeEnum.BOOK.value
+            elif bf_upper == ModelBookTypeEnum.VIDEO.value:
+                content_type_filter = ModelContentTypeEnum.VIDEO.value
             else:
                 raise HTTPException(status_code=400, detail="Invalid book_format specified.")
         except KeyError: # Should not happen if bf_upper matches ModelBookTypeEnum values
@@ -142,6 +144,8 @@ async def get_single_book(
         derived_book_format = ModelBookTypeEnum.AUDIO.value
     elif content.content_type == ModelContentTypeEnum.BOOK.value:
         derived_book_format = ModelBookTypeEnum.TEXT.value # Or PDF if that's the case
+    elif content.content_type == ModelContentTypeEnum.VIDEO.value:
+        derived_book_format = ModelBookTypeEnum.VIDEO.value
     else:
         derived_book_format = ModelBookTypeEnum.PDF.value
     book_resp = BookResponse.model_validate(content) # Pydantic v2
@@ -163,7 +167,7 @@ async def create_new_book( # Renamed
     # author_id will be current_user.id
     # author_name can be set from content_in if it's for a traditional author
     # not on the platform. If current_user is the author, author_name can be derived.
-    
+    print(content_in)
     new_content = await book_crud.create_book(
         db=db, 
         obj_in=content_in,
@@ -222,27 +226,41 @@ async def delete_existing_book( # Renamed
     response_model=BookChapterResponseWithoutSections, 
     status_code=status.HTTP_201_CREATED
 )
-async def create_chapter_for_book_route( # Renamed to avoid conflict if merged
+async def create_chapter_for_book_route(
     book_id: PyUUID,
-    chapter_in: BookChapterCreate, # Use specific BookChapterCreate
-    #current_user: User = Depends(get_current_user), # Permissions
+    chapter_in: BookChapterCreate,
+    #current_user: User = Depends(get_current_user), # Assuming permissions needed
     db: AsyncSession = Depends(get_async_db)
 ):
-    book = await book_crud.get_book(db, content_id=book_id)
+    book = await book_crud.get_book(db, content_id=book_id) # get_book from CRUDBook
     if not book:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
 
-    # Permission check (e.g., Admin, Moderator, or Author of the book)
-    # ... (implement your permission logic)
-    print(book)
+    # Permission Check
+    # ... (your permission logic based on current_user and book.author_id) ...
+
+    # === LOGIC BASED ON BOOKTYPE (CONTENT_TYPE) ===
+    # book.content_type will be 'BOOK' (for text), 'AUDIO', 'PDF', 'VIDEO' based on creation
+    book_actual_content_type = ModelContentTypeEnum(book.content_type) # Convert string from DB to enum
+
+    if book_actual_content_type == ModelContentTypeEnum.PDF:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Chapters cannot be added to PDF-type books. The PDF is a single file."
+        )
+    
+    # For AUDIO or VIDEO books, chapter_in might need to contain audio_url/video_url
+    # You might want to add validation here or in Pydantic schema for BookChapterCreate
+    # e.g., if book.content_type == AUDIO and not chapter_in.audio_url: raise Error
+
     try:
-        chapter = await book_chapter_crud.create_for_book( # Use book_chapter_crud
+        chapter_model = await book_chapter_crud.create_for_book(
             db=db, obj_in=chapter_in, book_id=book_id
         )
-        print(chapter)
     except ValueError as e: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    return chapter
+    
+    return BookChapterResponseWithoutSections.model_validate(chapter_model)
 
 # Example for GET single chapter:
 @router.get(
@@ -272,20 +290,32 @@ async def get_specific_book_chapter_route(
 async def list_book_chapters_paginated_route( 
     request: Request,
     book_id: PyUUID,
-    skip: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
-    include_sections: bool = Query(False, description="Whether to include sections for each chapter"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    include_sections: bool = Query(False, description="Whether to include sections (only applicable for TEXT books)"),
     db: AsyncSession = Depends(get_async_db)
 ):
-    book = await book_crud.get_book(db, content_id=book_id)
+    book = await book_crud.get_book(db, content_id=book_id) # from CRUDBook
     if not book:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
 
-    chapters, total_count = await book_chapter_crud.get_chapters_for_book_and_count(
-        db=db, book_id=book_id, skip=skip, limit=limit, load_sections=include_sections
+    book_actual_content_type = ModelContentTypeEnum(book.content_type)
+
+    if book_actual_content_type == ModelContentTypeEnum.PDF:
+        # Return empty paginated response or 400
+        return PaginatedResponse[BookChapterResponseWithoutSections]( # Or just Any
+            total_count=0, limit=limit, skip=skip, items=[] 
+        )
+        # Alternatively:
+        # raise HTTPException(status_code=400, detail="PDF books do not have a chapter list.")
+
+    # Determine if sections should actually be loaded based on book type
+    should_load_sections_for_crud = include_sections and (book_actual_content_type == ModelContentTypeEnum.BOOK)
+
+    chapter_models, total_count = await book_chapter_crud.get_chapters_for_book_and_count(
+        db=db, book_id=book_id, skip=skip, limit=limit, load_sections=should_load_sections_for_crud
     )
     
-    # Construct next and previous page URLs
     next_page = None
     if (skip + limit) < total_count:
         next_params = request.query_params._dict.copy()
@@ -299,24 +329,21 @@ async def list_book_chapters_paginated_route(
         prev_params["skip"] = str(max(0, skip - limit))
         prev_params["limit"] = str(limit)
         prev_page = str(request.url.replace_query_params(**prev_params))
-    if include_sections:
 
+    processed_items = []
+    if should_load_sections_for_crud: # Returning BookChapterResponse
+        for chapter_model in chapter_models:
+            processed_items.append(BookChapterResponse.model_validate(chapter_model))
         return PaginatedResponse[BookChapterResponse](
-            total_count=total_count,
-            limit=limit,
-            skip=skip,
-            next_page=next_page,
-            prev_page=prev_page,
-            items=chapters # The items themselves
+            total_count=total_count, limit=limit, skip=skip, 
+            next_page=next_page, prev_page=prev_page, items=processed_items
         )
-    else:
+    else: # Returning BookChapterResponseWithoutSections
+        for chapter_model in chapter_models:
+            processed_items.append(BookChapterResponseWithoutSections.model_validate(chapter_model))
         return PaginatedResponse[BookChapterResponseWithoutSections](
-            total_count=total_count,
-            limit=limit,
-            skip=skip,
-            next_page=next_page,
-            prev_page=prev_page,
-            items=chapters # The items themselves
+            total_count=total_count, limit=limit, skip=skip,
+            next_page=next_page, prev_page=prev_page, items=processed_items
         )
 
 @router.put(
@@ -378,6 +405,17 @@ async def create_section_for_book_chapter_route(
     #current_user: User = Depends(get_current_user), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
+    # Fetch book to check its content_type
+    book = await book_crud.get_book(db, content_id=book_id)
+    if not book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+
+    book_actual_content_type = ModelContentTypeEnum(book.content_type)
+    if book_actual_content_type != ModelContentTypeEnum.BOOK: # Only TEXT books (ContentType.BOOK) have sections
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sections are not applicable for this book type ('{book.content_type}'). Only for TEXT books."
+        )
     # Verify chapter exists and belongs to book
     chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
     if not chapter:
@@ -413,25 +451,32 @@ async def get_specific_book_section_route(
 
 @router.get(
     "/{book_id}/chapters/{chapter_id}/sections", 
-    response_model=PaginatedResponse[BookSectionResponse],
+    response_model=PaginatedResponse[BookSectionResponse]
 )
 async def list_book_sections_paginated_route(
     request: Request,
     book_id: PyUUID,
     chapter_id: PyUUID,
-    skip: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db)
 ):
-    # Verify chapter exists and belongs to the book
-    chapter = await book_chapter_crud.get_chapter_by_id(db=db, chapter_id=chapter_id, book_id=book_id)
-    if not chapter:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
+    # Fetch book to check its content_type
+    book = await book_crud.get_book(db, content_id=book_id)
+    if not book:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
+
+    book_actual_content_type = ModelContentTypeEnum(book.content_type)
+    if book_actual_content_type != ModelContentTypeEnum.BOOK: # Only TEXT books (ContentType.BOOK) have sections
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sections are not applicable for this book type ('{book.content_type}'). Only for TEXT books."
+        )
 
     sections, total_count = await book_section_crud.get_sections_for_chapter_and_count(
         db=db, chapter_id=chapter_id, skip=skip, limit=limit
     )
-
+    print(sections, total_count)
     # Construct next and previous page URLs
     next_page = None
     if (skip + limit) < total_count:
@@ -446,14 +491,10 @@ async def list_book_sections_paginated_route(
         prev_params["skip"] = str(max(0, skip - limit))
         prev_params["limit"] = str(limit)
         prev_page = str(request.url.replace_query_params(**prev_params))
-        
+
     return PaginatedResponse[BookSectionResponse](
-        total_count=total_count,
-        limit=limit,
-        skip=skip,
-        next_page=next_page,
-        prev_page=prev_page,
-        items=sections
+        total_count=total_count, limit=limit, skip=skip,
+        next_page=next_page, prev_page=prev_page, items=sections
     )
 
 @router.put(
