@@ -9,5 +9,6 @@ from .story import story_crud
 from .teaching import teaching_crud
 # ...
 from .category import category_crud
+from .collection import collection_crud, collection_item_crud
 
 from .place import sacred_place_crud

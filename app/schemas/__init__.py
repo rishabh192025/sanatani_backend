@@ -11,7 +11,10 @@ from .homepage import HomepageCard, HomepageCardsResponse
 from .category import CategoryBase, CategoryCreate, CategoryUpdate, CategoryResponse
 from .story import StoryBase, StoryCreate, StoryUpdate, StoryResponse
 from .teaching import TeachingBase, TeachingCreate, TeachingUpdate, TeachingResponse
-#from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse
+from .collection import (
+    CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, 
+    CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse, CollectionResponse
+)
 from .s3_upload import PresignRequest
 
 

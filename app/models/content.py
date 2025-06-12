@@ -95,7 +95,7 @@ class Content(Base):
     # reviews = relationship("ContentReview", back_populates="content")
     # user_progress = relationship("UserProgress", back_populates="content")
     translations = relationship("ContentTranslation", back_populates="original_content")
-    collection_associations = relationship("CollectionItem", back_populates="content_item")
+    collection_assignments = relationship("CollectionItem", back_populates="content")
 
     # Enum property accessors
     @property
