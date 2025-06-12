@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.api.v1 import (
-    auth, users, homepage, categories,
+    auth, users, homepage, categories, collections,
     place, webhooks, book, s3_upload, stories, teachings
 )
      # , admin, places, calendar # Placeholder for future routers
@@ -56,6 +56,7 @@ app.add_middleware(
 
 
 # API Routes
+app.include_router(collections.router, prefix="/api/v1/collections", tags=["Collections"])
 app.include_router(teachings.router, prefix="/api/v1/teachings", tags=["Teachings"])
 app.include_router(stories.router, prefix="/api/v1/stories", tags=["Stories"]) # Add this
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["Categories"]) # Add this
