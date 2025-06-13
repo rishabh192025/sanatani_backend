@@ -22,8 +22,7 @@ class CRUDTeaching(CRUDBase[Content, TeachingCreate, TeachingUpdate]): # Typed w
 
         # Exclude 'format' as it's used to determine content_type.
         # Other fields like content_body, file_url, duration are directly from TeachingCreate.
-        teaching_data_dict = obj_in.model_dump(exclude={"category_id", "format"})
-
+        teaching_data_dict = obj_in.model_dump(exclude={"category_id", "format", "content_type"})
         db_obj = Content(
             **teaching_data_dict,
             content_type=actual_content_type_value,
