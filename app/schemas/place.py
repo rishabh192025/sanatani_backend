@@ -55,3 +55,29 @@ class PlaceOut(PlaceBase):
 
     class Config:
         orm_mode = True
+
+
+class CityResponse(BaseModel):
+    id: UUID
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class StateResponse(BaseModel):
+    id: UUID
+    name: str
+    # cities: list[CityResponse] = None
+
+    class Config:
+        orm_mode = True
+
+
+class RegionResponse(BaseModel):
+    id: UUID
+    name: str
+    # states: list[StateResponse] = None
+
+    class Config:
+        orm_mode = True

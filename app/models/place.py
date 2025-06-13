@@ -59,3 +59,27 @@ class Place(Base):
         Index('idx_location', 'latitude', 'longitude'),
         Index('idx_place_region_type', 'region', 'category'),
     )
+
+
+class Region(Base):
+    __tablename__ = "regions"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    states = relationship("State", back_populates="region")
+
+
+class State(Base):
+    __tablename__ = "states"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False, unique=True)
+    region_id = Column(UUID(as_uuid=True), ForeignKey("regions.id"))
+    region = relationship("Region", back_populates="states")
+    cities = relationship("City", back_populates="state")
+
+
+class City(Base):
+    __tablename__ = "cities"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)       # city names cant be unique as two aurangabad etc.
+    state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
+    state = relationship("State", back_populates="cities")
