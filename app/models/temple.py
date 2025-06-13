@@ -1,0 +1,34 @@
+# app/models/temple.py
+from app.database import Base
+
+from sqlalchemy import (
+    Column, Integer, String, Text, DateTime, Boolean, Float,
+    ForeignKey, Enum, JSON, LargeBinary, UniqueConstraint, Index
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
+
+
+
+class Temple(Base):
+    __tablename__ = "temple"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    place_name = Column(String(200), nullable=False, index=True)    # Will have to display this using list all places name, but store as string, search on google and ask sir
+    name = Column(String(200), nullable=False, index=True)
+    main_deity = Column(String(200), nullable=True)
+    address = Column(Text, nullable=True)
+    visiting_hours = Column(JSON, nullable=True)
+    description = Column(Text, nullable=True)
+    history = Column(Text, nullable=True)
+    architecture = Column(Text, nullable=True)
+    cover_image = Column(JSON, nullable=True)
+    is_featured_place = Column(Boolean, nullable=True)
+    is_active = Column(Boolean, default=True)               # soft delete flag
+    visit_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
