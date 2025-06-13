@@ -9,6 +9,7 @@ from . import homepage
 from . import book
 
 from . import place
+from . import lost_heritage
 from . import webhooks
 from . import categories
 

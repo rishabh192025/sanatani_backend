@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
     auth, users, homepage, categories,
-    place, webhooks, book, s3_upload
+    place, webhooks, book, s3_upload, lost_heritage
 )
      # , admin, places, calendar # Placeholder for future routers
 
@@ -63,6 +63,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(homepage.router, prefix="/api/v1/homepage", tags=["Homepage Features"])
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
 app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
+app.include_router(lost_heritage.router, prefix="/api/v1/lost_heritage", tags=["Lost Heritage"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
 app.include_router(s3_upload.router, prefix="/api/v1/s3_upload", tags=["S3 Upload"])
 

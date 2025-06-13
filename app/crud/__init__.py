@@ -8,4 +8,4 @@ from .book_section import book_section_crud
 # ...
 from .category import category_crud
 
-from .place import sacred_place_crud
+from .lost_heritage import lost_heritage_crud
