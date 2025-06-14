@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm # For form data
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth import Token, UserLogin, Msg # UserLogin for request body
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, AdminCreate # For registration
 from app.dependencies import get_async_db
 from app.services.auth_service import auth_service
 from app.config import settings
@@ -37,7 +37,7 @@ async def login_for_access_token(
 
 # @router.post("/admin/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 # async def register_user(
-#     user_in: UserCreate, 
+#     user_in: AdminCreate, 
 #     db: AsyncSession = Depends(get_async_db)
 # ):
 #     user = await auth_service.register_new_admin_user(db=db, user_in=user_in)

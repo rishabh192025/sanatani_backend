@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from app.crud.base import CRUDBase
 from app.models.user import User, UserRole
 from datetime import datetime
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate, AdminCreate
 from app.utils.security import get_password_hash
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
@@ -37,6 +37,23 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             is_active=obj_in.is_active if obj_in.is_active is not None else True,
             is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
             role=UserRole.USER.value,  # Default role, can be changed later
+            preferred_language=obj_in.preferred_language
+        )
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def create_admin_user(self, db: AsyncSession, *, obj_in: AdminCreate) -> User:
+        db_obj = User(
+            email=obj_in.email,
+            hashed_password=get_password_hash(obj_in.password), # Password hashing is sync
+            username=obj_in.username,
+            first_name=obj_in.first_name,
+            last_name=obj_in.last_name,
+            is_active=obj_in.is_active if obj_in.is_active is not None else True,
+            is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
+            role=UserRole.ADMIN.value,  # Default role, can be changed later
             preferred_language=obj_in.preferred_language
         )
         db.add(db_obj)

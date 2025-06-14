@@ -12,8 +12,14 @@ class UserBase(BaseModel):
     last_name: Optional[str] = Field(None, max_length=100)
     is_active: Optional[bool] = True
     is_verified: Optional[bool] = False
-    #role: Optional[UserRole] = UserRole.USER
     preferred_language: Optional[LanguageCode] = LanguageCode.EN
+
+class UserCreate(UserBase):
+    password: Optional[str] = Field(None, min_length=8)
+
+class AdminCreate(UserBase):
+    password: str = Field(..., min_length=8)
+    role: Optional[UserRole] = UserRole.ADMIN
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
