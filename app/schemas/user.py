@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     last_name: Optional[str] = Field(None, max_length=100)
     is_active: Optional[bool] = True
     is_verified: Optional[bool] = False
-    role: Optional[UserRole] = UserRole.USER
+    #role: Optional[UserRole] = UserRole.USER
     preferred_language: Optional[LanguageCode] = LanguageCode.EN
 
 class UserCreate(UserBase):

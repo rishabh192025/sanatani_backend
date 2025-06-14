@@ -36,7 +36,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             last_name=obj_in.last_name,
             is_active=obj_in.is_active if obj_in.is_active is not None else True,
             is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
-            role=obj_in.role,
+            role=UserRole.USER.value,  # Default role, can be changed later
             preferred_language=obj_in.preferred_language
         )
         db.add(db_obj)
