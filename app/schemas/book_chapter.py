@@ -11,6 +11,8 @@ class BookChapterBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=300)
     #chapter_number: int = Field(..., gt=0)
     description: Optional[str] = None
+    audio_url: Optional[str] = None
+    video_url: Optional[str] = None
 
 class BookChapterCreate(BookChapterBase):
     pass
@@ -34,27 +36,3 @@ class BookChapterResponse(BookChapterResponseWithoutSections):
 
     class Config:
         from_attributes = True
-    
-    #This validator will run after initial population from attributes
-    @model_validator(mode='before') # 'before' might be better here
-    @classmethod
-    def handle_sections_loading(cls, data: Any, info: ValidationInfo) -> Any:
-        # 'data' will be the SQLAlchemy model instance when from_attributes=True
-        if isinstance(data, BookChapter):
-            # Check if 'sections' relationship is loaded
-            # The 'load_sections' flag was used in the CRUD to *decide* to load.
-            # If it wasn't loaded, data.sections is an InstrumentedAttribute.
-            # Pydantic should ideally treat Optional fields as None if the attribute
-            # is an unloaded InstrumentedAttribute.
-            
-            # A simpler check for this specific case: if sections is in the context, use it.
-            # This context would be set by the API route if needed.
-            # if info.context and "loaded_sections" in info.context:
-            #    # This is getting too complex. Let's simplify.
-            #    # The core issue is Pydantic trying to access the unloaded relationship.
-            #    # By making `sections: Optional[List[BookSectionResponse]] = None`,
-            #    # Pydantic *should* be fine if the `chapter_model.sections` is an empty list
-            #    # (when loaded with selectinload and no sections exist) OR if it's None.
-            #    # The problem is the InstrumentedAttribute state.
-            pass
-        return data
