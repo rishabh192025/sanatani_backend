@@ -1,7 +1,5 @@
 from app.database import Base
 from enum import Enum
-from app.schemas.place import PlaceType
-
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Float,
     ForeignKey, Enum, JSON, LargeBinary, UniqueConstraint, Index
@@ -12,23 +10,21 @@ import uuid
 from sqlalchemy.dialects.postgresql import UUID
 
 
-# Place
 class Place(Base):
-    __tablename__ = "place"
+    __tablename__ = "places"
 
     # Basic Info
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    region = Column(String(100))
-    state = Column(String(100), nullable=True)
-    city = Column(String(100), nullable=True)
-    country = Column(String(100), nullable=True)
+    country_id = Column(UUID(as_uuid=True), ForeignKey("countries.id"))
+    region_id = Column(UUID(as_uuid=True), ForeignKey("regions.id"))
+    state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
+    city_id = Column(UUID(as_uuid=True), ForeignKey("cities.id"))
 
     # Place Information
     name = Column(String(200), nullable=False, index=True)
     place_description = Column(Text, nullable=True)  # place description
 
     # Categories
-    category = Column(String(200), nullable=False, index=True)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
     is_featured = Column(Boolean, default=False)
 
@@ -52,34 +48,16 @@ class Place(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
-    # # Relationships
+    # Relationships
+    country = relationship("Country", back_populates="places")
+    region = relationship("Region", back_populates="places")
+    state = relationship("State", back_populates="places")
+    city = relationship("City", back_populates="places")
+    category = relationship("Category", back_populates="places")
+    user = relationship("User", back_populates="places")
+
     # pilgrimage_routes = relationship("PilgrimageRoutePlace", back_populates="place")
 
     __table_args__ = (
         Index('idx_location', 'latitude', 'longitude'),
-        Index('idx_place_region_type', 'region', 'category'),
     )
-
-
-class Region(Base):
-    __tablename__ = "regions"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False, unique=True)
-    states = relationship("State", back_populates="region")
-
-
-class State(Base):
-    __tablename__ = "states"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False, unique=True)
-    region_id = Column(UUID(as_uuid=True), ForeignKey("regions.id"))
-    region = relationship("Region", back_populates="states")
-    cities = relationship("City", back_populates="state")
-
-
-class City(Base):
-    __tablename__ = "cities"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)       # city names cant be unique as two aurangabad etc.
-    state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
-    state = relationship("State", back_populates="cities")

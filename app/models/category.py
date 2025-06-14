@@ -28,6 +28,7 @@ class Category(Base):
     
     parent = relationship("Category", remote_side=[id], back_populates="children")
     children = relationship("Category", back_populates="parent")
+    places = relationship("Place", back_populates="category")
     # content = relationship("Content", back_populates="category") # Defined in Content model via backref
     
     def __repr__(self):

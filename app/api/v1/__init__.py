@@ -6,6 +6,7 @@ from . import auth
 from . import content
 from . import users
 from . import place
+from . import location
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 # api_router_v1.include_router(content.router, prefix="/content", tags=["Content"])
