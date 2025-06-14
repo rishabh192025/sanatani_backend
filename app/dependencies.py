@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, status, Request # Request might not be needed now
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID as PyUUID # Not directly used in get_current_user but good for other places
 
@@ -8,6 +9,8 @@ from app.models.user import User, UserRole # Import UserRole if used in other de
 from app.crud.user import user_crud
 
 from fastapi_clerk_auth import ClerkConfig, ClerkHTTPBearer
+
+security = HTTPBearer()
 
 # This initialization should ideally happen once when the app starts.
 # If dependencies.py is imported multiple times, this could re-initialize.
@@ -54,9 +57,43 @@ async def get_current_user(
 
     return user
 
+async def get_system_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_async_db) # Changed
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(
+            credentials.credentials, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM]
+        )
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            raise credentials_exception
+        try:
+            user_id = PyUUID(user_id_str)
+        except ValueError:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+    
+    user = await user_crud.get_user(db, user_id=user_id) # Changed: await
+    if user is None:
+        raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+    return user
+
 # Other dependencies like get_current_active_admin remain the same
 async def get_current_active_admin(
-    #current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_system_user)
 ) -> User:
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
@@ -66,7 +103,7 @@ async def get_current_active_admin(
     return current_user
 
 async def get_current_active_moderator_or_admin(
-    #current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> User:
     if current_user.role not in [UserRole.ADMIN, UserRole.MODERATOR]:
         raise HTTPException(
