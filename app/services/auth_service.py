@@ -10,7 +10,7 @@ from app.utils.security import verify_password, create_access_token, create_refr
 from app.models.user import User
 
 class AuthService:
-    async def authenticate_user(self, db: AsyncSession, login_data: UserLogin) -> User | None:
+    async def authenticate_admin_user(self, db: AsyncSession, login_data: UserLogin) -> User | None:
         user = await user_crud.get_user_by_email(db, email=login_data.email)
         if not user:
             return None
@@ -26,7 +26,7 @@ class AuthService:
         refresh_token = create_refresh_token(data={"sub": str(user_id)})
         return access_token, refresh_token
     
-    async def register_new_user(self, db: AsyncSession, user_in: UserCreate) -> User:
+    async def register_new_admin_user(self, db: AsyncSession, user_in: UserCreate) -> User:
         existing_user_email = await user_crud.get_user_by_email(db, email=user_in.email)
         if existing_user_email:
             raise HTTPException(

@@ -21,7 +21,7 @@ async def login_for_access_token(
     login_data: UserLogin, # Use Pydantic model for JSON body
     db: AsyncSession = Depends(get_async_db)
 ):
-    user = await auth_service.authenticate_user(db, login_data=login_data)
+    user = await auth_service.authenticate_admin_user(db, login_data=login_data)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -35,12 +35,12 @@ async def login_for_access_token(
         "token_type": "bearer"
     }
 
-# @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+# @router.post("/admin/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 # async def register_user(
 #     user_in: UserCreate, 
 #     db: AsyncSession = Depends(get_async_db)
 # ):
-#     user = await auth_service.register_new_user(db=db, user_in=user_in)
+#     user = await auth_service.register_new_admin_user(db=db, user_in=user_in)
 #     # Optionally, log in the user immediately and return tokens
 #     return user
 
@@ -88,15 +88,6 @@ async def refresh_access_token(
 @router.get("/admin/me", response_model=UserResponse)
 async def read_users_me(
     current_user: User = Depends(get_current_active_admin)
-    ):
-    """
-    Get current logged-in user.
-    """
-    return current_user
-
-@router.get("/me", response_model=UserResponse)
-async def read_users_me(
-    current_user: User = Depends(get_current_user)
     ):
     """
     Get current logged-in user.
