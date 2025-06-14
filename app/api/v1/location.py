@@ -21,11 +21,15 @@ async def get_all_countries(db: AsyncSession = Depends(get_async_db)):
     return countries
 
 
-@router.get("/countries/{country_id}/regions", response_model=List[RegionResponse])
-async def get_all_regions(country_id: UUID, db: AsyncSession = Depends(get_async_db)):
+@router.get("/countries/regions", response_model=List[RegionResponse])
+async def get_all_regions(
+    country_id: UUID = Query(default=UUID("ed2cff2f-6065-4a63-a921-73b2af99a0b9"), description="ID of the country to fetch regions for"),
+    db: AsyncSession = Depends(get_async_db)
+):
     result = await db.execute(select(Region).where(Region.country_id == country_id))
     states = result.scalars().all()
     return states
+
 
 
 @router.get("/regions/{region_id}/states", response_model=List[StateResponse])
