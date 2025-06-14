@@ -7,7 +7,9 @@ from .category import Category
 from .place import Place
 from .location import Country, Region, State, City
 
-from .content import Content, ContentType, ContentStatus, ContentChapter, ContentSection
+from .content import Content, ContentType, ContentStatus, BookChapter, BookSection
+
+from .collection import Collection, CollectionItem
 
 # from .content import ContentChapter, ContentTranslation # Add when created
 # from .places import SacredPlace, PlaceType # Add when created

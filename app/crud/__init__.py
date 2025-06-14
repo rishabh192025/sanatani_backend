@@ -1,7 +1,13 @@
 # app/crud/__init__.py
 from .base import CRUDBase
 from .user import user_crud
-from .content import content_crud
-from .content_chapter import content_chapter_crud
-from .content_section import content_section_crud
 from .place import place_crud
+# ...
+from .book import book_crud
+from .book_chapter import book_chapter_crud
+from .book_section import book_section_crud
+from .story import story_crud
+from .teaching import teaching_crud
+# ...
+from .category import category_crud
+from .collection import collection_crud, collection_item_crud

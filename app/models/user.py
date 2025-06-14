@@ -14,20 +14,25 @@ from app.database import Base # Corrected import
 
 # Enums
 class UserRole(PyEnum): # Keep Python Enum for direct use
-    ADMIN = "admin"
-    MODERATOR = "moderator"
-    USER = "user"
-    GUEST = "guest"
+    ADMIN = "ADMIN"
+    MODERATOR = "MODERATOR"
+    USER = "USER"
+    GUEST = "GUEST"
 
 class LanguageCode(PyEnum): # Keep Python Enum
-    EN = "en"
-    HI = "hi"
-    SA = "sa"
-    BN = "bn"
-    TA = "ta"
-    TE = "te"
-    MR = "mr"
-    GU = "gu"
+    EN = "EN"
+    HI = "HI"
+    SA = "AS"
+    BN = "BN"
+    TA = "TA"
+    TE = "TE"
+    MR = "MR"
+    GU = "GU"
+    KA = "KA"
+    ML = "ML"
+    OR = "OR"
+    PA = "PA"
+    UR = "UR"
 
 class User(Base):
     __tablename__ = "users"
@@ -36,8 +41,9 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(100), unique=True, nullable=True, index=True)
+    clerk_user_id = Column(String(255), unique=True, nullable=False, index=True)
     phone_number = Column(String(20), unique=True, nullable=True)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)
     
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
@@ -55,11 +61,11 @@ class User(Base):
     state_province = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     timezone = Column(String(50), nullable=True)
-    preferred_language = Column(SQLAlchemyEnum(LanguageCode), default=LanguageCode.EN) # Use SQLAlchemyEnum here
+    preferred_language = Column(String(50), default=LanguageCode.EN.value)
     
-    role = Column(SQLAlchemyEnum(UserRole), default=UserRole.USER, nullable=False) # Use SQLAlchemyEnum here
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False)
+    role = Column(String(50), default=UserRole.USER.value, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
     last_login_at = Column(DateTime, nullable=True)
     login_count = Column(Integer, default=0)
@@ -68,9 +74,9 @@ class User(Base):
     subscription_starts_at = Column(DateTime, nullable=True)
     subscription_ends_at = Column(DateTime, nullable=True)
     
-    created_at = Column(DateTime, default=func.now(), nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=True)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Renamed for clarity
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Relationships - Add other models as they are created
     # created_content = relationship("Content", back_populates="author", foreign_keys="Content.author_id") # Example
