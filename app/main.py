@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import (
     auth, users, homepage, categories, collections,
-    place, webhooks, book, s3_upload, stories, teachings, 
-    location
+    place, webhooks, book, s3_upload, stories, teachings,
+    location, temple
 )
      # , admin, places, calendar # Placeholder for future routers
 
@@ -71,6 +71,7 @@ app.include_router(location.router, prefix="/api/v1/location", tags=["Location"]
 app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
 app.include_router(s3_upload.router, prefix="/api/v1/s3_upload", tags=["S3 Upload"])
+app.include_router(temple.router, prefix="/api/v1/temples", tags=["Temple"])
 
 @app.get("/", tags=["Root"])
 async def root():

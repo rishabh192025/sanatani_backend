@@ -44,3 +44,4 @@ class City(Base):
     state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
     state = relationship("State", back_populates="cities")
     places = relationship("Place", back_populates="city")
+    temples = relationship("Temple", back_populates="city")
