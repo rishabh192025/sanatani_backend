@@ -8,6 +8,7 @@ from . import homepage
 from . import book
 from . import temple
 from . import place
+from . import lost_heritage
 from . import location
 from . import webhooks
 from . import categories

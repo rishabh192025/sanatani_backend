@@ -82,6 +82,7 @@ class User(Base):
     # user_progress = relationship("UserProgress", back_populates="user")
     # bookmarks = relationship("UserBookmark", back_populates="user")
     # reviews = relationship("ContentReview", back_populates="user")
+    lost_heritages = relationship("LostHeritage", back_populates="user")
     places = relationship("Place", back_populates="user")
     temples = relationship("Temple", back_populates="user")
 
