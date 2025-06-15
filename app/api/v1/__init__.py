@@ -4,10 +4,9 @@ from fastapi import APIRouter
 
 from . import auth
 from . import users
-
 from . import homepage
 from . import book
-
+from . import temple
 from . import place
 from . import lost_heritage
 from . import location
@@ -17,6 +16,7 @@ from . import stories
 from . import teachings
 from . import s3_upload
 from . import collections
+
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 # api_router_v1.include_router(content.router, prefix="/content", tags=["Content"])
