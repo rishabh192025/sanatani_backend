@@ -80,7 +80,7 @@ class User(Base):
     # Relationships - Add other models as they are created
     # created_content = relationship("Content", back_populates="author", foreign_keys="Content.author_id") # Example
     # user_progress = relationship("UserProgress", back_populates="user")
-    # bookmarks = relationship("UserBookmark", back_populates="user")
+    bookmarks = relationship("UserBookmark", back_populates="user", cascade="all, delete-orphan")
     # reviews = relationship("ContentReview", back_populates="user")
     places = relationship("Place", back_populates="user")
 
