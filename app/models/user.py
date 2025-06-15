@@ -83,7 +83,8 @@ class User(Base):
     # user_progress = relationship("UserProgress", back_populates="user")
     # bookmarks = relationship("UserBookmark", back_populates="user")
     # reviews = relationship("ContentReview", back_populates="user")
-    
+    lost_heritages = relationship("LostHeritage", back_populates="user")
+
     # For self-referential created_by
     # creator = relationship("User", remote_side=[id], backref="created_users") # If needed
 

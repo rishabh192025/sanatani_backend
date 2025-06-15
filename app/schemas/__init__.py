@@ -9,7 +9,7 @@ from .book_section import BookSectionBase, BookSectionCreate, BookSectionUpdate,
 from .book_toc import TOCChapterItem, TOCSectionItem, BookTableOfContentsResponse
 from .homepage import HomepageCard, HomepageCardsResponse
 from .category import CategoryBase, CategoryCreate, CategoryUpdate, CategoryResponse
-from .lost_heritage import LostHeritageBase, LostHeritageCreate, LostHeritageUpdate, LostHeritageOut, LostHeritageCategoryType, LostHeritageContentType
+from .lost_heritage import LostHeritageBase, LostHeritageCreate, LostHeritageUpdate, LostHeritageResponse, LostHeritageContentType
 #from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse
 from .s3_upload import PresignRequest
 
