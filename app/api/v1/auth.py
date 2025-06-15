@@ -4,24 +4,24 @@ from fastapi.security import OAuth2PasswordRequestForm # For form data
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth import Token, UserLogin, Msg # UserLogin for request body
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, AdminCreate # For registration
 from app.dependencies import get_async_db
 from app.services.auth_service import auth_service
 from app.config import settings
 from app.utils.security import create_access_token # For refresh token endpoint
 from jose import jwt, JWTError
 from app.crud.user import user_crud # For fetching user during refresh
-from app.dependencies import get_current_user # For /me endpoint
+from app.dependencies import get_current_user, get_current_active_admin # For /me endpoint
 from app.models.user import User # For type hinting
 
 router = APIRouter()
 
-@router.post("/login", response_model=Token)
+@router.post("/admin/login", response_model=Token)
 async def login_for_access_token(
     login_data: UserLogin, # Use Pydantic model for JSON body
     db: AsyncSession = Depends(get_async_db)
 ):
-    user = await auth_service.authenticate_user(db, login_data=login_data)
+    user = await auth_service.authenticate_admin_user(db, login_data=login_data)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -35,17 +35,17 @@ async def login_for_access_token(
         "token_type": "bearer"
     }
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(
-    user_in: UserCreate, 
-    db: AsyncSession = Depends(get_async_db)
-):
-    user = await auth_service.register_new_user(db=db, user_in=user_in)
-    # Optionally, log in the user immediately and return tokens
-    return user
+# @router.post("/admin/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+# async def register_user(
+#     user_in: AdminCreate, 
+#     db: AsyncSession = Depends(get_async_db)
+# ):
+#     user = await auth_service.register_new_admin_user(db=db, user_in=user_in)
+#     # Optionally, log in the user immediately and return tokens
+#     return user
 
 
-@router.post("/refresh-token", response_model=Token)
+@router.post("/admin/refresh-token", response_model=Token)
 async def refresh_access_token(
     refresh_token_str: str, # Expecting refresh token in body or header
     db: AsyncSession = Depends(get_async_db)
@@ -85,9 +85,9 @@ async def refresh_access_token(
     except JWTError:
         raise credentials_exception
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/admin/me", response_model=UserResponse)
 async def read_users_me(
-    #current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_admin)
     ):
     """
     Get current logged-in user.

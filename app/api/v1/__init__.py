@@ -10,9 +10,13 @@ from . import book
 
 from . import place
 from . import lost_heritage
+from . import location
 from . import webhooks
 from . import categories
-
+from . import stories
+from . import teachings
+from . import s3_upload
+from . import collections
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 # api_router_v1.include_router(content.router, prefix="/content", tags=["Content"])

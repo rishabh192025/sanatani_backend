@@ -47,6 +47,8 @@ class Category(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     
     parent = relationship("Category", remote_side=[id], back_populates="children")
+    places = relationship("Place", back_populates="category")
+    # content = relationship("Content", back_populates="category") # Defined in Content model via backref
     children = relationship("Category", back_populates="parent", cascade="all, delete-orphan")
     lost_heritages = relationship("LostHeritage", back_populates="category")
 

@@ -27,7 +27,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
     async def get_book(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
         query = select(self.model).filter(self.model.id == content_id)
         # Use .value to convert enum to string if Content.content_type stores string values in DB
-        query = query.where(Content.content_type == ContentTypeEnum.BOOK.value)  # If book_type=TEXT
+        query = query.where(Content.sub_type == ContentTypeEnum.BOOK.value)  # If book_type=TEXT
         # query = query.where(Content.sub_type == ContentSubType.BOOK.value)  # This is good for your plan
         # For audio books, it would be:
         # query = query.where(Content.content_type == ContentTypeEnum.AUDIO.value)
@@ -47,10 +47,11 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
 
         # Convert book_type string to enum safely (case insensitive)
         try:
-            book_type_enum = BookType(obj_in.book_type.lower())
+            book_type_enum = BookType(obj_in.book_type)
         except Exception:
             book_type_enum = BookType.TEXT  # default fallback
-
+        print(f"Book type enum: {obj_in.book_type}")
+        print(book_type_enum)
         # Set content_type based on book_type
         if book_type_enum == BookType.AUDIO:
             determined_content_type = ContentTypeEnum.AUDIO.value
@@ -58,6 +59,8 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
             # Assuming you want a new enum value for PDFs; create or reuse
             # For example:
             determined_content_type = ContentTypeEnum.PDF.value  # <-- make sure this exists
+        elif book_type_enum == BookType.VIDEO:
+            determined_content_type = ContentTypeEnum.VIDEO.value
         else:
             # Default to text book
             determined_content_type = ContentTypeEnum.BOOK.value

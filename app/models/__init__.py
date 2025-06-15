@@ -3,8 +3,9 @@ from app.database import Base
 
 from .user import User, UserRole, LanguageCode
 from .category import Category
-
 from .lost_heritage import LostHeritage
+from .place import Place
+from .location import Country, Region, State, City
 
 from .content import Content, ContentType, ContentStatus, BookChapter, BookSection
 

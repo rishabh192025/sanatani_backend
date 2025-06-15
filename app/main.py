@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.api.v1 import (
-    auth, users, homepage, categories,
-    place, webhooks, book, s3_upload, lost_heritage
+    auth, users, homepage, categories, collections,
+    place, webhooks, book, s3_upload, stories, teachings, 
+    location, lost_heritage
 )
      # , admin, places, calendar # Placeholder for future routers
 
@@ -56,12 +57,17 @@ app.add_middleware(
 
 
 # API Routes
+app.include_router(collections.router, prefix="/api/v1/collections", tags=["Collections"])
+app.include_router(teachings.router, prefix="/api/v1/teachings", tags=["Teachings"])
+app.include_router(stories.router, prefix="/api/v1/stories", tags=["Stories"]) # Add this
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["Categories"]) # Add this
 app.include_router(book.router, prefix="/api/v1/books", tags=["Books"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(homepage.router, prefix="/api/v1/homepage", tags=["Homepage Features"])
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
+app.include_router(location.router, prefix="/api/v1/location", tags=["Location"])
+# app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"]) # Placeholder
 app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
 app.include_router(lost_heritage.router, prefix="/api/v1/lost_heritage", tags=["Lost Heritage"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
