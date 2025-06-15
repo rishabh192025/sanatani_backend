@@ -6,8 +6,9 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession # Changed
 from sqlalchemy.future import select # Changed for SQLAlchemy 1.4+ style with async
+from sqlalchemy.orm import selectinload
 from sqlalchemy import func, update as sqlalchemy_update, delete as sqlalchemy_delete
-
+from app.models.content import BookChapter, BookSection, Content, ContentSubType
 from app.database import Base # Assuming Base is defined in app.database
 
 ModelType = TypeVar("ModelType", bound=Base)
@@ -70,3 +71,22 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await db.delete(obj)
             await db.commit()
         return obj
+
+    async def get_book_table_of_contents(self, db: AsyncSession, book_id: PyUUID) -> Optional[Content]:
+        """
+        Fetches a book with its chapters, and each chapter with its sections,
+        optimized for a table of contents view.
+        """
+        result = await db.execute(
+            select(self.model)
+            .options(
+                selectinload(self.model.chapters) # Content.chapters
+                .selectinload(BookChapter.sections) # BookChapter.sections
+            )
+            .filter(self.model.id == book_id)
+            .filter(self.model.sub_type == ContentSubType.BOOK.value) # Ensure it's a book
+        )
+        book = result.scalar_one_or_none()
+        # The relationships (chapters and their sections) will be loaded.
+        # Pydantic schemas (TOCChapterItem, TOCSectionItem) will select only needed fields.
+        return book

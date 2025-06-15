@@ -18,3 +18,5 @@ build/
 dist/
 # Ignore IDE specific files
 .idea/
+
+.env

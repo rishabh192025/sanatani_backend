@@ -5,12 +5,12 @@ from uuid import UUID
 
 from app.crud.user import user_crud
 from app.schemas.auth import UserLogin
-from app.schemas.user import UserCreate # For registration
+from app.schemas.user import UserCreate, AdminCreate # For registration
 from app.utils.security import verify_password, create_access_token, create_refresh_token
 from app.models.user import User
 
 class AuthService:
-    async def authenticate_user(self, db: AsyncSession, login_data: UserLogin) -> User | None:
+    async def authenticate_admin_user(self, db: AsyncSession, login_data: UserLogin) -> User | None:
         user = await user_crud.get_user_by_email(db, email=login_data.email)
         if not user:
             return None
@@ -26,7 +26,7 @@ class AuthService:
         refresh_token = create_refresh_token(data={"sub": str(user_id)})
         return access_token, refresh_token
     
-    async def register_new_user(self, db: AsyncSession, user_in: UserCreate) -> User:
+    async def register_new_admin_user(self, db: AsyncSession, user_in: AdminCreate) -> User:
         existing_user_email = await user_crud.get_user_by_email(db, email=user_in.email)
         if existing_user_email:
             raise HTTPException(
@@ -41,7 +41,7 @@ class AuthService:
                     detail="This username is already taken.",
                 )
         
-        user = await user_crud.create_user(db, obj_in=user_in)
+        user = await user_crud.create_admin_user(db, obj_in=user_in)
         return user
 
 auth_service = AuthService()

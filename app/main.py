@@ -4,7 +4,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from fastapi.middleware.trustedhost import TrustedHostMiddleware # Consider if needed for prod
 
-from app.api.v1 import auth, users, content, place  # , admin, places, calendar # Placeholder for future routers
+
+from app.api.v1 import (
+    auth, users, homepage, categories, collections,
+    place, webhooks, book, s3_upload, stories, teachings, 
+    location
+)
+     # , admin, places, calendar # Placeholder for future routers
+
 from app.config import settings
 from app.database import Base, sync_engine # Use sync_engine for initial table creation
 from fastapi.staticfiles import StaticFiles
@@ -36,7 +43,12 @@ app.mount("/static", StaticFiles(directory=settings.UPLOAD_DIR), name="static")
 # Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.ALLOWED_HOSTS] if settings.ALLOWED_HOSTS else ["*"],
+    #allow_origins=[str(origin) for origin in settings.ALLOWED_HOSTS] if settings.ALLOWED_HOSTS else ["*"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:8000",
+        "https://project-guruji-2or4.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,12 +57,20 @@ app.add_middleware(
 
 
 # API Routes
+app.include_router(collections.router, prefix="/api/v1/collections", tags=["Collections"])
+app.include_router(teachings.router, prefix="/api/v1/teachings", tags=["Teachings"])
+app.include_router(stories.router, prefix="/api/v1/stories", tags=["Stories"]) # Add this
+app.include_router(categories.router, prefix="/api/v1/categories", tags=["Categories"]) # Add this
+app.include_router(book.router, prefix="/api/v1/books", tags=["Books"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
-app.include_router(content.router, prefix="/api/v1/content", tags=["Content"])
+app.include_router(homepage.router, prefix="/api/v1/homepage", tags=["Homepage Features"])
 # app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"]) # Placeholder
-app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
+app.include_router(location.router, prefix="/api/v1/location", tags=["Location"])
 # app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"]) # Placeholder
+app.include_router(place.router, prefix="/api/v1/places", tags=["Places"]) # Placeholder
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]) # Placeholder
+app.include_router(s3_upload.router, prefix="/api/v1/s3_upload", tags=["S3 Upload"])
 
 @app.get("/", tags=["Root"])
 async def root():
