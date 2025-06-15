@@ -83,6 +83,7 @@ class User(Base):
     # bookmarks = relationship("UserBookmark", back_populates="user")
     # reviews = relationship("ContentReview", back_populates="user")
     places = relationship("Place", back_populates="user")
+    temples = relationship("Temple", back_populates="user")
 
     # For self-referential created_by
     # creator = relationship("User", remote_side=[id], backref="created_users") # If needed
