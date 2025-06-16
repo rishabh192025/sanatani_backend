@@ -1,7 +1,6 @@
 # app/models/lost_heritage.py
 from app.database import Base
 from enum import Enum
-from app.schemas.place import PlaceType
 
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, Float,
