@@ -178,5 +178,42 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
         await db.refresh(db_item)
         await db.refresh(db_item, attribute_names=['content']) # For response
         return db_item
+    
+    async def get_items_for_collection_paginated(
+        self, 
+        db: AsyncSession, 
+        *, 
+        collection_id: UUID, 
+        skip: int = 0, 
+        limit: int = 10,
+        load_content_details: bool = True # Flag to control loading content
+    ) -> Tuple[List[CollectionItem], int]:
+        
+        # Query for total count
+        count_query = (
+            select(func.count(self.model.id))
+            .select_from(self.model)
+            .filter(self.model.collection_id == collection_id)
+        )
+        total_count_result = await db.execute(count_query)
+        total_count = total_count_result.scalar_one()
+
+        # Query for data
+        data_query = (
+            select(self.model)
+            .filter(self.model.collection_id == collection_id)
+            .order_by(self.model.sort_order, self.model.created_at) # Sort by order, then by creation
+            .offset(skip)
+            .limit(limit)
+        )
+        
+        if load_content_details:
+            # Use selectinload for potentially multiple items to avoid N+1 queries
+            data_query = data_query.options(selectinload(self.model.content)) 
+            
+        result = await db.execute(data_query)
+        items = result.scalars().all()
+        
+        return items, total_count
 
 collection_item_crud = CRUDCollectionItem(CollectionItem)
