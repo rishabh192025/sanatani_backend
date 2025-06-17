@@ -1,3 +1,4 @@
+# app/models/place.py
 from app.database import Base
 from enum import Enum
 from sqlalchemy import (
