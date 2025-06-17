@@ -15,6 +15,7 @@ from . import stories
 from . import teachings
 from . import s3_upload
 from . import collections
+from . import pilgrimage_route
 
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])

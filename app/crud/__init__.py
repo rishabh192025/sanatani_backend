@@ -12,3 +12,4 @@ from .teaching import teaching_crud
 from .category import category_crud
 from .collection import collection_crud, collection_item_crud
 from .temple import temple_crud
+from .pilgrimage_route import pilgrimage_route_crud
