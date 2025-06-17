@@ -35,6 +35,7 @@ class State(Base):
     region = relationship("Region", back_populates="states")
     cities = relationship("City", back_populates="state")
     places = relationship("Place", back_populates="state")
+    festivals = relationship("Festival", back_populates="state")
 
 
 class City(Base):
