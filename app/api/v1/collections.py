@@ -231,3 +231,52 @@ async def remove_item_from_collection_api( # Renamed from endpoint
     if not removed_item or removed_item.collection_id != collection_id: # Extra check
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection item not found or does not belong to this collection")
     return
+
+@router.get("/{collection_id}/items", response_model=PaginatedResponse[CollectionItemResponse], tags=[ITEM_TAG])
+async def list_items_in_collection_api(
+    request: Request, # For constructing pagination URLs
+    collection_id: PyUUID,
+    skip: int = Query(0, ge=0, description="Number of items to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Number of items per page"),
+    # load_content: bool = Query(True, description="Whether to include full content details"), # Control via CRUD
+    db: AsyncSession = Depends(get_async_db),
+    # current_user: User = Depends(get_current_user) # Optional: if collection visibility depends on user
+):
+    # Check if collection exists and if user has permission to view it
+    collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found")
+
+    # TODO: Add permission check if the collection is private
+    # if not collection.is_public and (not current_user or collection.curator_id != current_user.id):
+    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to view this collection's items")
+
+    items, total_count = await collection_item_crud.get_items_for_collection_paginated(
+        db=db,
+        collection_id=collection_id,
+        skip=skip,
+        limit=limit,
+        load_content_details=True # Always load for CollectionItemResponse which expects it
+    )
+
+    # Construct next and previous page URLs
+    next_page, prev_page = None, None
+    if (skip + limit) < total_count:
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_params["limit"] = str(limit) # Ensure limit is also passed for consistency
+        next_page = str(request.url.replace_query_params(**next_params))
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_params["limit"] = str(limit) # Ensure limit is also passed
+        prev_page = str(request.url.replace_query_params(**prev_params))
+    
+    return PaginatedResponse[CollectionItemResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=items # The CRUD method already loads content if specified
+    )

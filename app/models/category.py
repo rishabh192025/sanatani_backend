@@ -51,7 +51,8 @@ class Category(Base):
     # pilgrimage_routes = relationship("PilgrimageRoute", back_populates="category")
     # content = relationship("Content", back_populates="category") # Defined in Content model via backref
     children = relationship("Category", back_populates="parent", cascade="all, delete-orphan")
-    
+    lost_heritages = relationship("LostHeritage", back_populates="category")
+
     # Relationship to Content (Content model has category_id FK)
     # content_items = relationship("Content", back_populates="category") # This is defined via backref on Content.category
 

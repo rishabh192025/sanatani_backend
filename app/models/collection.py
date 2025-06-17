@@ -53,6 +53,9 @@ class CollectionItem(Base):
     
     added_at = Column(DateTime, default=func.now(), nullable=False)
 
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+
     collection = relationship("Collection", back_populates="items")
     # content_item = relationship("Content", backref="collection_entries") # Relationship to Content model
     # Using a simple relationship. If you need to navigate from Content to CollectionItem:
