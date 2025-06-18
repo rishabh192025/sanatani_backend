@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     last_name: Optional[str] = Field(None, max_length=100)
     is_active: Optional[bool] = True
     is_verified: Optional[bool] = False
-    preferred_language: Optional[LanguageCode] = LanguageCode.EN
+    preferred_language: Optional[str] = LanguageCode.EN.value
 
 class UserCreate(UserBase):
     password: Optional[str] = Field(None, min_length=8)
@@ -32,7 +32,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
     role: Optional[UserRole] = None
-    preferred_language: Optional[LanguageCode] = None
+    preferred_language: Optional[str] = None
     # Do not allow password update here directly, create a separate endpoint for that
 
 class UserResponse(UserBase):
