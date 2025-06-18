@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
 from ...crud import lost_heritage_crud
-from ...schemas import LostHeritageCreate, LostHeritageUpdate, LostHeritageResponse
+from ...schemas import LostHeritageCreate, LostHeritageUpdate, LostHeritageResponse, PaginatedResponse
 from ...database import get_async_db
 
 
@@ -17,12 +17,12 @@ async def create_lost_heritage(
     # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
-    existing = await lost_heritage_crud.get_by_title(db, title=lost_heritage_in.title)
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A Lost Heritage with this title already exists.",
-        )
+    # existing = await lost_heritage_crud.get_by_title(db, title=lost_heritage_in.title)
+    # if existing:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="A Lost Heritage with this title already exists.",
+    #     )
     result = await lost_heritage_crud.create_lost_heritage(
         db=db,
         obj_in=lost_heritage_in,
@@ -32,24 +32,45 @@ async def create_lost_heritage(
     return result
 
 
-@router.get("", response_model=List[LostHeritageResponse])
+@router.get("", response_model=PaginatedResponse[LostHeritageResponse])
 async def list_all_lost_heritages(
+    request: Request,  # Add this to build next/prev URLs
     title: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
 ):
     """
     Retrieve all lost heritages if no filters are added.
     Add more filters as needed.
     """
-    lost_heritages = await lost_heritage_crud.get_filtered(
+    lost_heritages, total_count = await lost_heritage_crud.get_filtered_with_count(
         db=db,
         title=title,
         skip=skip,
         limit=limit,
     )
-    return lost_heritages
+    response_items = [LostHeritageResponse.model_validate(p) for p in lost_heritages]
+
+    base_url = str(request.url.remove_query_params(keys=["skip", "limit"]))
+    next_page = prev_page = None
+    if (skip + limit) < total_count:
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_page = str(request.url.replace_query_params(**next_params))
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_page = str(request.url.replace_query_params(**prev_params))
+
+    return PaginatedResponse[LostHeritageResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=response_items
+    )
 
 
 @router.get("/{lost_heritage_id}", response_model=LostHeritageResponse)
