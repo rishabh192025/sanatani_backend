@@ -48,7 +48,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000", 
         "http://localhost:8000",
-        "https://project-guruji-2or4.vercel.app"
+        "https://project-guruji-2or4.vercel.app",
+        "https://project-guruji-new-smoky.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
