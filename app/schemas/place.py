@@ -30,7 +30,6 @@ class PlaceBase(BaseModel):
 
 class PlaceCreate(PlaceBase):
     name: str
-    created_by: Optional[UUID] = None
 
 
 class PlaceUpdate(PlaceBase):
@@ -44,5 +43,5 @@ class PlaceResponse(PlaceBase):
     updated_at: Optional[datetime] = None
     created_by: Optional[UUID] = None
 
-    class Config:
-        orm_mode = True
+    class Config:  # Only needed in this as this only involves converting from ORM objects
+        from_attributes = True

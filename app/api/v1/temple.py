@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Request, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
 from ...crud import temple_crud
-from ...schemas import TempleCreate, TempleUpdate, TempleResponse
+from ...schemas import TempleCreate, TempleUpdate, TempleResponse, PaginatedResponse
 from ...database import get_async_db
 
 
@@ -17,12 +17,12 @@ async def create_temple(
     # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
-    existing = await temple_crud.get_by_name(db, name=temple_in.name)
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A Temple with this name already exists.",
-        )
+    # existing = await temple_crud.get_by_name(db, name=temple_in.name)
+    # if existing:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="A Temple with this name already exists.",
+    #     )
     result = await temple_crud.create_temple(
         db=db,
         obj_in=temple_in,
@@ -32,11 +32,12 @@ async def create_temple(
     return result
 
 
-@router.get("", response_model=List[TempleResponse])
+@router.get("", response_model=PaginatedResponse[TempleResponse])
 async def list_all_temples(
-    name: Optional[str] = Query(None),
+    request: Request,  # Add this to build next/prev URLs
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=100),
+    name: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -44,13 +45,33 @@ async def list_all_temples(
     Add more filters as needed.
     As of now only from admin side search by name filtered is applied, if required any for user side will add.
     """
-    temples = await temple_crud.get_filtered(
+    temples, total_count = await temple_crud.get_filtered_with_count(
         db=db,
-        name=name,
         skip=skip,
         limit=limit,
+        name=name,
     )
-    return temples
+    response_items = [TempleResponse.model_validate(p) for p in temples]
+
+    base_url = str(request.url.remove_query_params(keys=["skip", "limit"]))
+    next_page = prev_page = None
+    if (skip + limit) < total_count:
+        next_params = request.query_params._dict.copy()
+        next_params["skip"] = str(skip + limit)
+        next_page = str(request.url.replace_query_params(**next_params))
+    if skip > 0:
+        prev_params = request.query_params._dict.copy()
+        prev_params["skip"] = str(max(0, skip - limit))
+        prev_page = str(request.url.replace_query_params(**prev_params))
+
+    return PaginatedResponse[TempleResponse](
+        total_count=total_count,
+        limit=limit,
+        skip=skip,
+        next_page=next_page,
+        prev_page=prev_page,
+        items=response_items
+    )
 
 
 @router.get("/{temple_id}", response_model=TempleResponse)
