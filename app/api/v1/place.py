@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, status, Query
+# app/api/v1/place.py
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID

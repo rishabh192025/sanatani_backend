@@ -85,6 +85,7 @@ class User(Base):
     lost_heritages = relationship("LostHeritage", back_populates="user")
     places = relationship("Place", back_populates="user")
     temples = relationship("Temple", back_populates="user")
+    pilgrimage_routes = relationship("PilgrimageRoute", back_populates="user")
 
     # For self-referential created_by
     # creator = relationship("User", remote_side=[id], backref="created_users") # If needed

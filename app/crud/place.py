@@ -1,4 +1,4 @@
-from sqlalchemy import func
+# app/crud/place.py
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import Optional, List, Tuple
@@ -6,6 +6,7 @@ from uuid import UUID
 from app.models import Place
 from app.schemas import PlaceCreate, PlaceUpdate
 from app.crud.base import CRUDBase
+from sqlalchemy import func
 
 
 class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):

@@ -1,3 +1,4 @@
+# app/schemas/place.py
 from pydantic import BaseModel
 from typing import Optional, List
 from enum import Enum
