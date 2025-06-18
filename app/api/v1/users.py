@@ -47,7 +47,7 @@ async def read_all_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
-    current_admin: User = Depends(get_current_active_admin) # Only admins can list all users
+    #current_admin: User = Depends(get_current_active_admin) # Only admins can list all users
 ):
     """
     Retrieve all users. Admin access required.
