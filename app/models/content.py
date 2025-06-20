@@ -96,8 +96,7 @@ class Content(Base):
     chapters = relationship("BookChapter", back_populates="content", cascade="all, delete-orphan", order_by="BookChapter.chapter_number")
     # reviews = relationship("ContentReview", back_populates="content")
     # user_progress = relationship("UserProgress", back_populates="content")
-    translations = relationship("ContentTranslation", back_populates="original_content")
-    collection_assignments = relationship("CollectionItem", back_populates="content")
+    collection_assignments = relationship("CollectionItem", back_populates="content", cascade="all, delete-orphan")
 
     # Enum property accessors
     @property
@@ -186,28 +185,3 @@ class BookSection(Base):
     def __repr__(self):
         return f"<BookSection(id={self.id}, title='{self.title}', order={self.section_order})>"
 
-
-class ContentTranslation(Base):
-    __tablename__ = "content_translation"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    original_content_id = Column(UUID(as_uuid=True), ForeignKey("content.id"), nullable=False)
-    language = Column(SQLAlchemyEnum(LanguageCode), nullable=False)
-    
-    title = Column(String(300), nullable=False)
-    subtitle = Column(String(500), nullable=True)
-    description = Column(Text, nullable=True)
-    content_body = Column(Text, nullable=True)
-    
-    translator_name = Column(String(200), nullable=True)
-    translation_status = Column(SQLAlchemyEnum(ContentStatus), default=ContentStatus.DRAFT)
-    
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
-    original_content = relationship("Content", back_populates="translations")
-    
-    __table_args__ = (
-        UniqueConstraint('original_content_id', 'language', name='unique_translation_per_language'),
-        {'extend_existing': True}
-    )
