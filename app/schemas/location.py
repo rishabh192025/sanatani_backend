@@ -10,7 +10,7 @@ class CountryResponse(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class RegionResponse(BaseModel):
@@ -19,7 +19,7 @@ class RegionResponse(BaseModel):
     # states: list[StateResponse] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class StateResponse(BaseModel):
@@ -28,7 +28,7 @@ class StateResponse(BaseModel):
     # cities: list[CityResponse] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class CityResponse(BaseModel):
@@ -36,4 +36,4 @@ class CityResponse(BaseModel):
     name: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
