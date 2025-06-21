@@ -348,7 +348,7 @@ async def list_book_chapters_paginated_route(
 
 @router.put(
     "/{book_id}/chapters/{chapter_id}",
-    response_model=BookChapterResponse
+    response_model=BookChapterResponseWithoutSections, # Use specific BookChapterResponseWithoutSections
 )
 async def update_book_chapter_route(
     book_id: PyUUID,
