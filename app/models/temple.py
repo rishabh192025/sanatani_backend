@@ -15,8 +15,8 @@ class Temple(Base):
     __tablename__ = "temples"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    place_id = Column(UUID(as_uuid=True), ForeignKey("cities.id"), nullable=False)
-    name = Column(String(200), nullable=False, index=True)
+    place_id = Column(UUID(as_uuid=True), ForeignKey("places.id"), nullable=False)
+    name = Column(String(200), nullable=False)
     main_deity = Column(String(200), nullable=True)
     address = Column(Text, nullable=True)
     visiting_hours = Column(String(200), nullable=True)
@@ -32,9 +32,9 @@ class Temple(Base):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    city = relationship("City", back_populates="temples")
     user = relationship("User", back_populates="temples")
+    place = relationship("Place", back_populates="temples")
 
-    __table_args__ = (
-        Index('idx_temple_name', 'name'),
-    )
+    # __table_args__ = (
+    #     Index('idx_temple_name', 'name'),
+    # )

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import temple_crud
+from ...crud import temple_crud, place_crud
 from ...schemas import TempleCreate, TempleUpdate, TempleResponse, PaginatedResponse
 from ...database import get_async_db
 
@@ -52,6 +52,11 @@ async def list_all_temples(
         name=name,
     )
     response_items = [TempleResponse.model_validate(p) for p in temples]
+    for idx, res in enumerate(response_items):
+        # print(res)
+        place= await place_crud.get(db, res.place_id)
+        # print(place)
+        response_items[idx].place_name = place.name
 
     base_url = str(request.url.remove_query_params(keys=["skip", "limit"]))
     next_page = prev_page = None
@@ -84,8 +89,13 @@ async def get_temple(temple_id: UUID, db: AsyncSession = Depends(get_async_db)):
 
     await db.commit()       # Commit to make it permanent
     await db.refresh(temple)     # Refresh to re-fetch any auto-updated fields (optional)
-
-    return temple
+    # print(temple)
+    res = TempleResponse.model_validate(temple)
+    # print(res)
+    place = await place_crud.get(db, temple.place_id)
+    # print(place)
+    res.place_name = place.name
+    return res
 
 
 @router.put("/{temple_id}", response_model=TempleResponse)

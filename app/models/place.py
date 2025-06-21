@@ -58,6 +58,7 @@ class Place(Base):
     user = relationship("User", back_populates="places")
 
     # pilgrimage_routes = relationship("PilgrimageRoutePlace", back_populates="place")
+    temples = relationship("Temple", back_populates="place")
 
     __table_args__ = (
         Index('idx_location', 'latitude', 'longitude'),
