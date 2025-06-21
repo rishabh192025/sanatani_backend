@@ -29,6 +29,7 @@ class TempleUpdate(TempleBase):
 class TempleResponse(TempleBase):
     id: UUID
     place_id: Optional[UUID] = None
+    place_name: Optional[str] = None
     name: Optional[str] = None
     visit_count: Optional[int] = 0
     created_at: Optional[datetime] = None
