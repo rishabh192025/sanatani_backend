@@ -44,7 +44,7 @@ async def list_all_books_paginated( # Renamed for clarity
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
-    book_format: Optional[str] = Query(None, description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"), # TEXT, AUDIO, PDF
+    book_format: Optional[str] = Query("TEXT", description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"), # TEXT, AUDIO, PDF
     db: AsyncSession = Depends(get_async_db)
 ):
     content_type_filter = None
