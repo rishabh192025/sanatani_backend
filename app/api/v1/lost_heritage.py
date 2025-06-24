@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
-
-from ...crud import lost_heritage_crud
-from ...schemas import LostHeritageCreate, LostHeritageUpdate, LostHeritageResponse, PaginatedResponse
-from ...database import get_async_db
+from app.dependencies import get_current_active_admin, get_current_user
+from app.crud import lost_heritage_crud
+from app.schemas import LostHeritageCreate, LostHeritageUpdate, LostHeritageResponse, PaginatedResponse
+from app.database import get_async_db
+from app.models import User  # Ensure User model is imported for type hinting
 
 
 router = APIRouter()
@@ -14,7 +15,7 @@ router = APIRouter()
 @router.post("", response_model=LostHeritageResponse, status_code=status.HTTP_201_CREATED)
 async def create_lost_heritage(
     lost_heritage_in: LostHeritageCreate,
-    # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db),
 ):
     # existing = await lost_heritage_crud.get_by_title(db, title=lost_heritage_in.title)
@@ -34,10 +35,11 @@ async def create_lost_heritage(
 
 @router.get("", response_model=PaginatedResponse[LostHeritageResponse])
 async def list_all_lost_heritages(
-    request: Request,  # Add this to build next/prev URLs
+    request: Request,
     title: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(get_current_user),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -74,7 +76,11 @@ async def list_all_lost_heritages(
 
 
 @router.get("/{lost_heritage_id}", response_model=LostHeritageResponse)
-async def get_lost_heritage(lost_heritage_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def get_lost_heritage(
+    lost_heritage_id: UUID, 
+    current_user: User = Depends(get_current_user),  # Use specific dependency
+    db: AsyncSession = Depends(get_async_db)
+):
     lost_heritage = await lost_heritage_crud.get(db=db, id=lost_heritage_id)
     if not lost_heritage:
         raise HTTPException(status_code=404, detail="Lost Heritage not found")
@@ -91,6 +97,7 @@ async def get_lost_heritage(lost_heritage_id: UUID, db: AsyncSession = Depends(g
 async def update_lost_heritage(
     lost_heritage_id: UUID,
     lost_heritage_in: LostHeritageUpdate,
+    current_user: User = Depends(get_current_active_admin),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     lost_heritage = await lost_heritage_crud.get(db=db, id=lost_heritage_id)
@@ -100,7 +107,11 @@ async def update_lost_heritage(
 
 
 @router.delete("/{lost_heritage_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_lost_heritage(lost_heritage_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def delete_lost_heritage(
+    lost_heritage_id: UUID, 
+    current_user: User = Depends(get_current_active_admin),  # Use specific dependency
+    db: AsyncSession = Depends(get_async_db)
+):
     lost_heritage = await lost_heritage_crud.get(db=db, id=lost_heritage_id)
     if not lost_heritage:
         raise HTTPException(status_code=404, detail="Lost Heritage not found")

@@ -32,25 +32,27 @@ async def list_all_generic_content( # Renamed for clarity
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
+    current_user: User = Depends(get_current_user), # Use current_user for access control
     db: AsyncSession = Depends(get_async_db)
 ):
     contents = await content_crud.get_content_list(
         db=db, 
         skip=skip, 
         limit=limit,
-        content_type_str=content_type, # Pass the value
-        sub_type_str=sub_type,         # Pass the value
-        category_id_str=category_id,   # Pass the value
-        language_str=language,       # Pass the value
-        status_str=status_filter or ContentStatus.PUBLISHED.value, # Pass the value
-        search_query=search            # Pass the value
+        content_type_str=content_type, 
+        sub_type_str=sub_type,  
+        category_id_str=category_id, 
+        language_str=language, 
+        status_str=status_filter or ContentStatus.PUBLISHED.value,
+        search_query=search
     )
     return contents
 
 @router.get("/{content_id_or_slug}", response_model=ContentResponse)
-async def get_single_content( # Renamed
+async def get_single_content(
     content_id_or_slug: str,
-    db: AsyncSession = Depends(get_async_db) # Changed
+    current_user: User = Depends(get_current_user), # Use current_user for access control
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Get a specific content item by its UUID or slug.
@@ -76,7 +78,7 @@ async def get_single_content( # Renamed
 @router.post("", response_model=ContentResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_content( # Renamed
     content_in: ContentCreate, # Changed parameter name for clarity
-    current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_active_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -98,7 +100,7 @@ async def create_new_content( # Renamed
 async def update_existing_content( # Renamed
     content_id: PyUUID, # Expect UUID
     content_in: ContentUpdate,
-    #current_user: User = Depends(get_current_user), # More granular check below
+    current_user: User = Depends(get_current_user), # More granular check below
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -142,7 +144,7 @@ async def delete_existing_content( # Renamed
 async def upload_content_main_file( # Renamed for clarity
     content_id: PyUUID,
     file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user), # Granular check below
+    current_user: User = Depends(get_current_active_admin), # Granular check below
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -181,7 +183,7 @@ async def upload_content_main_file( # Renamed for clarity
 async def create_chapter_for_content(
     content_id: PyUUID,
     chapter_in: ContentChapterCreate,
-    #current_user: User = Depends(get_current_user), # Granular check
+    current_user: User = Depends(get_current_active_admin), # Granular check
     db: AsyncSession = Depends(get_async_db)
 ):
     content_item = await content_crud.get_content(db, content_id=content_id)
@@ -208,6 +210,7 @@ async def list_chapters_for_content(
     include_sections: bool = Query(False, description="Whether to include sections for each chapter in the list"), # Default to false for list view
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    current_user: User = Depends(get_current_user), # Use current_user for access control
     db: AsyncSession = Depends(get_async_db)
 ):
     content_item = await content_crud.get_content(db, content_id=content_id)
@@ -229,6 +232,7 @@ async def get_specific_chapter(
     content_id: PyUUID,
     chapter_id: PyUUID,
     include_sections: bool = Query(True, description="Whether to include sections in the response"),
+    current_user: User = Depends(get_current_user), # Use current_user for access control
     db: AsyncSession = Depends(get_async_db)
 ):
     if include_sections:
@@ -245,7 +249,7 @@ async def update_specific_chapter(
     content_id: PyUUID,
     chapter_id: PyUUID,
     chapter_in: ContentChapterUpdate,
-    #current_user: User = Depends(get_current_user), 
+    current_user: User = Depends(get_current_active_admin), 
     db: AsyncSession = Depends(get_async_db)
 ):
     db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id) # Fetch without sections first
@@ -278,7 +282,7 @@ async def update_specific_chapter(
 async def delete_specific_chapter(
     content_id: PyUUID,
     chapter_id: PyUUID,
-    #current_user: User = Depends(get_current_user), # Granular check
+    current_user: User = Depends(get_current_active_admin), # Granular check
     db: AsyncSession = Depends(get_async_db)
 ):
     db_chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
@@ -299,7 +303,7 @@ async def delete_specific_chapter(
 async def upload_content_main_file(
     content_id: PyUUID,
     file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_content = await content_crud.get_content(db, content_id=content_id)
@@ -334,7 +338,7 @@ async def create_section_for_chapter(
     content_id: PyUUID, # For verification
     chapter_id: PyUUID,
     section_in: ContentSectionCreate,
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify chapter exists and belongs to content
@@ -366,6 +370,7 @@ async def list_sections_for_chapter(
     chapter_id: PyUUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    current_user: User = Depends(get_current_user), # Use current_user for access control
     db: AsyncSession = Depends(get_async_db)
 ):
     chapter = await content_chapter_crud.get_chapter(db=db, chapter_id=chapter_id)
@@ -382,9 +387,10 @@ async def list_sections_for_chapter(
     response_model=ContentSectionResponse
 )
 async def get_specific_section(
-    content_id: PyUUID, # For verification
-    chapter_id: PyUUID, # For verification
+    content_id: PyUUID, 
+    chapter_id: PyUUID,
     section_id: PyUUID,
+    current_user: User = Depends(get_current_user), # Use current_user for access control
     db: AsyncSession = Depends(get_async_db)
 ):
     section = await content_section_crud.get_section(db=db, section_id=section_id)
@@ -407,7 +413,7 @@ async def update_specific_section(
     chapter_id: PyUUID, # For verification
     section_id: PyUUID,
     section_in: ContentSectionUpdate,
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_section = await content_section_crud.get_section(db=db, section_id=section_id)
@@ -441,7 +447,7 @@ async def delete_specific_section(
     content_id: PyUUID, # For verification
     chapter_id: PyUUID, # For verification
     section_id: PyUUID,
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_section = await content_section_crud.get_section(db=db, section_id=section_id)

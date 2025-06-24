@@ -3,13 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-# ... other necessary imports from dependencies, models, etc. ...
+
 from app.schemas.story import StoryCreate, StoryUpdate, StoryResponse # Use specific story schemas
 from app.schemas.pagination import PaginatedResponse
 from app.crud.story import story_crud
 from app.models.user import User
 from app.models.content import ContentStatus
-from app.dependencies import get_async_db, get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
+from app.dependencies import get_async_db, get_current_user, get_current_active_admin
 from uuid import UUID as PyUUID
 
 
@@ -19,14 +19,14 @@ STORY_TAG = "Stories"
 @router.post("", response_model=StoryResponse, status_code=status.HTTP_201_CREATED, tags=[STORY_TAG])
 async def create_new_story_api(
     story_in: StoryCreate, # Using StoryCreate
-    #current_user: User = Depends(get_current_active_moderator_or_admin),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     story = await story_crud.create_story(
         db=db, 
         obj_in=story_in, 
-        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
-        #author_id=current_user.id
+        #author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+        author_id=current_user.id
         )
     return story # Pydantic will convert Content model to StoryResponse
 
@@ -39,6 +39,7 @@ async def list_all_stories_api(
     category_id: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user), # Use specific dependency
     db: AsyncSession = Depends(get_async_db)
 ):
     # Default to published if no status_filter is provided for public listing
@@ -71,6 +72,7 @@ async def list_all_stories_api(
 @router.get("/{story_id_or_slug}", response_model=StoryResponse, tags=[STORY_TAG])
 async def get_single_story_api(
     story_id_or_slug: str,
+    current_user: User = Depends(get_current_user), # Use specific dependency
     db: AsyncSession = Depends(get_async_db)
 ):
     story_model = None
@@ -88,7 +90,7 @@ async def get_single_story_api(
 async def update_existing_story_api(
     story_id: PyUUID,
     story_in: StoryUpdate, # Using StoryUpdate
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_story = await story_crud.get_story(db, story_id=story_id)
@@ -107,7 +109,7 @@ async def update_existing_story_api(
 @router.delete("/{story_id}", status_code=status.HTTP_204_NO_CONTENT, tags=[STORY_TAG])
 async def delete_existing_story_api(
     story_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_story = await story_crud.get_story(db, story_id=story_id)

@@ -45,6 +45,7 @@ async def list_all_books_paginated( # Renamed for clarity
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
     book_format: Optional[str] = Query("TEXT", description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"), # TEXT, AUDIO, PDF
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     content_type_filter = None
@@ -122,6 +123,7 @@ async def list_all_books_paginated( # Renamed for clarity
 @router.get("/{content_id_or_slug}", response_model=BookResponse)
 async def get_single_book(
     content_id_or_slug: str,
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -158,7 +160,7 @@ async def get_single_book(
 @router.post("",response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_book( # Renamed
     content_in: BookCreate, # Changed parameter name for clarity
-    #current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_active_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -171,8 +173,7 @@ async def create_new_book( # Renamed
     new_content = await book_crud.create_book(
         db=db, 
         obj_in=content_in,
-        #author_id=current_user.id,
-        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+        author_id=current_user.id,
     )
     print(new_content)
     return new_content
@@ -181,7 +182,7 @@ async def create_new_book( # Renamed
 async def update_existing_book( # Renamed
     content_id: PyUUID, # Expect UUID
     content_in: BookUpdate,
-    #current_user: User = Depends(get_current_user), # More granular check below
+    current_user: User = Depends(get_current_active_admin), # More granular check below
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -206,7 +207,7 @@ async def update_existing_book( # Renamed
 @router.delete("/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_existing_book( # Renamed
     content_id: PyUUID, # Expect UUID
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db) # Changed
 ):
     """
@@ -229,7 +230,7 @@ async def delete_existing_book( # Renamed
 async def create_chapter_for_book_route(
     book_id: PyUUID,
     chapter_in: BookChapterCreate,
-    #current_user: User = Depends(get_current_user), # Assuming permissions needed
+    current_user: User = Depends(get_current_active_admin), # Assuming permissions needed
     db: AsyncSession = Depends(get_async_db)
 ):
     book = await book_crud.get_book(db, content_id=book_id) # get_book from CRUDBook
@@ -270,6 +271,7 @@ async def get_specific_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     include_sections: bool = Query(True, description="Whether to include sections"),
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     chapter = await book_chapter_crud.get_chapter_by_id( # Use book_chapter_crud
@@ -293,6 +295,7 @@ async def list_book_chapters_paginated_route(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     include_sections: bool = Query(False, description="Whether to include sections (only applicable for TEXT books)"),
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     book = await book_crud.get_book(db, content_id=book_id) # from CRUDBook
@@ -354,7 +357,7 @@ async def update_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     chapter_in: BookChapterUpdate, # Use specific BookChapterUpdate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify chapter exists and belongs to book
@@ -380,7 +383,7 @@ async def update_book_chapter_route(
 async def delete_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -402,7 +405,7 @@ async def create_section_for_book_chapter_route(
     book_id: PyUUID, 
     chapter_id: PyUUID,
     section_in: BookSectionCreate, # Use specific BookSectionCreate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Fetch book to check its content_type
@@ -440,6 +443,7 @@ async def get_specific_book_section_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     section_id: PyUUID,
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     section = await book_section_crud.get_section_by_id( # Use book_section_crud
@@ -459,6 +463,7 @@ async def list_book_sections_paginated_route(
     chapter_id: PyUUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     # Fetch book to check its content_type
@@ -506,7 +511,7 @@ async def update_book_section_route(
     chapter_id: PyUUID,
     section_id: PyUUID,
     section_in: BookSectionUpdate, # Use specific BookSectionUpdate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify section exists and belongs to chapter
@@ -533,7 +538,7 @@ async def delete_book_section_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     section_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -552,6 +557,7 @@ async def delete_book_section_route(
 )
 async def get_book_table_of_contents_route(
     book_id: PyUUID,
+    current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     """

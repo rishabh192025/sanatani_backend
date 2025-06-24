@@ -4,9 +4,9 @@ from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy.future import select # Changed for SQLAlchemy 1.4+ style with async
-from ...database import get_async_db
-from ...models.location import Region, State, City, Country
-from ...schemas.location import RegionResponse, StateResponse, CityResponse, CountryResponse
+from app.database import get_async_db
+from app.models.location import Region, State, City, Country
+from app.schemas.location import RegionResponse, StateResponse, CityResponse, CountryResponse
 
 
 router = APIRouter()

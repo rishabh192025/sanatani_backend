@@ -4,12 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID as PyUUID
 
-from app.dependencies import get_async_db, get_current_active_admin # Admin for create/update/delete
+from app.dependencies import get_async_db, get_current_active_admin, get_current_user
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.schemas.pagination import PaginatedResponse
 from app.crud.category import category_crud
-from app.models.category import CategoryScopeType, Category # Import model for type hint
-
+from app.models.category import CategoryScopeType, Category
+from app.models.user import User
 router = APIRouter()
 
 CATEGORY_TAG = "Categories"
@@ -24,7 +24,7 @@ CATEGORY_TAG = "Categories"
 async def create_new_category(
     category_in: CategoryCreate,
     db: AsyncSession = Depends(get_async_db),
-    #current_admin: User = Depends(get_current_active_admin) # Example: Only admins can create
+    current_admin: User = Depends(get_current_active_admin) # Example: Only admins can create
 ):
     try:
         category = await category_crud.create_category(db=db, obj_in=category_in)
@@ -46,6 +46,7 @@ async def list_categories_by_type(
     #limit: int = Query(25, ge=1, le=100),
     is_active: Optional[bool] = Query(True, description="Filter by active status"),
     #load_children_in_list: bool = Query(False, alias="loadChildren", description="Set to true to load direct children for each category in the list"),
+    current_user: User = Depends(get_current_user), # Example: Only admins can list categories
     db: AsyncSession = Depends(get_async_db)
 ):
     parent_uuid: Optional[PyUUID] = None
@@ -102,6 +103,7 @@ async def list_categories_by_type(
 async def get_single_category(
     category_id_or_slug: str,
     #load_children: bool = Query(False, description="Whether to load direct children"),
+    current_user: User = Depends(get_current_user), # Example: Only admins can view categories
     db: AsyncSession = Depends(get_async_db)
 ):
     category: Optional[Category] = None
@@ -127,7 +129,7 @@ async def update_existing_category(
     category_id: PyUUID,
     category_in: CategoryUpdate,
     db: AsyncSession = Depends(get_async_db),
-    #current_admin: User = Depends(get_current_active_admin)
+    current_admin: User = Depends(get_current_active_admin)
 ):
     db_category = await category_crud.get(db, id=category_id)
     if not db_category:
@@ -147,7 +149,7 @@ async def update_existing_category(
 async def delete_existing_category(
     category_id: PyUUID,
     db: AsyncSession = Depends(get_async_db),
-    #current_admin: User = Depends(get_current_active_admin)
+    current_admin: User = Depends(get_current_active_admin)
 ):
     db_category = await category_crud.get(db, id=category_id)
     if not db_category:

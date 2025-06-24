@@ -59,8 +59,8 @@ class CRUDCollection(CRUDBase[Collection, CollectionCreate, CollectionUpdate]):
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100, 
         is_public: Optional[bool] = None, 
         is_featured: Optional[bool] = None,
-        load_items_with_content: bool = False
-        #curator_id: Optional[UUID] = None
+        load_items_with_content: bool = False,
+        curator_id: Optional[UUID] = None
     ) -> Tuple[List[Collection], int]:
         
         filters = []
@@ -68,8 +68,8 @@ class CRUDCollection(CRUDBase[Collection, CollectionCreate, CollectionUpdate]):
             filters.append(self.model.is_public == is_public)
         if is_featured is not None:
             filters.append(self.model.is_featured == is_featured)
-        # if curator_id is not None:
-        #     filters.append(self.model.curator_id == curator_id)
+        if curator_id is not None:
+            filters.append(self.model.curator_id == curator_id)
 
         count_query = select(func.count(self.model.id)).select_from(self.model)
         data_query = select(self.model)
