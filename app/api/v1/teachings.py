@@ -50,8 +50,7 @@ async def list_all_teachings_api(
     search: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_async_db)
 ):
-    final_status_str = status_filter if status_filter else ContentStatus.PUBLISHED.value
-
+    final_status_str = status_filter #if status_filter else ContentStatus.PUBLISHED.value
     teaching_models, total_count = await teaching_crud.get_teachings_list_and_count(
         db, skip=skip, limit=limit, content_type_str=content_type, status_str=final_status_str,
         category_id_str=category_id, language_str=language, search_query=search
