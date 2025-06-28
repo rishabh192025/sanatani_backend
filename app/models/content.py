@@ -27,7 +27,6 @@ class ContentType(PyEnum): # Renamed from ContentEntityType for brevity
     AUDIO = "AUDIO"
     VIDEO = "VIDEO"
     ARTICLE = "ARTICLE"
-    PDF_DOCUMENT = "PDF_DOCUMENT" # For BookType.PDF (no chapters/sections, u
     PDF = "PDF"  # For e-books, PDFs, etc.
     PODCAST_SERIES = "PODCAST_SERIES" # A series, episodes would be chapters/sections or related content
     DIGITAL_TEXT = "DIGITAL_TEXT" # For scriptures, manuscripts if distinct from book/article
@@ -64,6 +63,7 @@ class Content(Base):
     status = Column(String(50), default=ContentStatus.DRAFT.value, nullable=False)
     category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     tags = Column(JSON, nullable=True)
+    details = Column(JSON, nullable=True) 
     language = Column(String(50), default=LanguageCode.EN, nullable=False)
     cover_image_url = Column(String(500), nullable=True)
     thumbnail_url = Column(String(500), nullable=True)
