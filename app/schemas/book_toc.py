@@ -16,6 +16,7 @@ class TOCChapterItem(BaseModel):
     title: str
     chapter_number: int
     sections: List[TOCSectionItem] = []
+    audio_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -24,6 +25,7 @@ class BookTableOfContentsResponse(BaseModel):
     book_id: UUID
     book_title: str
     chapters: List[TOCChapterItem] = []
+    cover_image_url: Optional[str] = None
 
     class Config:
         from_attributes = True
