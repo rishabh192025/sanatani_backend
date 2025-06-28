@@ -25,4 +25,8 @@ from .pagination import PaginatedResponse
 #from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse
 from .pilgrimage_route import PilgrimageRouteBase, PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageRouteResponse
 from .festival import FestivalBase, FestivalCreate, FestivalUpdate, FestivalResponse
+from .contact_submission import (
+    ContactSubmissionCreate,
+    ContactSubmissionResponse, ContactSubmissionUpdateAdmin, ResolverInfo
+)
 

@@ -46,7 +46,11 @@ class CRUDTemple(CRUDBase[Temple, TempleCreate, TempleUpdate]):
 
         return items, total_count
 
-
+    async def get_temples_count(self, db: AsyncSession) -> int:
+        count_query = select(func.count(self.model.id))
+        result = await db.execute(count_query)
+        return result.scalar_one()
+        
     # async def get_filtered(
     #         self,
     #         db: AsyncSession,

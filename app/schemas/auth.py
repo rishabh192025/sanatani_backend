@@ -16,3 +16,12 @@ class UserLogin(BaseModel):
 
 class Msg(BaseModel):
     message: str
+
+class OverviewResponse(BaseModel):
+    books: int = 0
+    audiobooks: int = 0 
+    teachings: int = 0
+    places: int = 0
+    temples: int = 0
+    festivals: int = 0
+    stories: int = 0

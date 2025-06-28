@@ -20,6 +20,7 @@ from . import collections
 from . import pilgrimage_route
 
 from . import festivals
+from . import contact
 
 
 # api_router_v1 = APIRouter()

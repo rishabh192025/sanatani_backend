@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm # For form data
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.auth import Token, UserLogin, Msg # UserLogin for request body
+from app.schemas.auth import Token, UserLogin, Msg, OverviewResponse # UserLogin for request body
 from app.schemas.user import UserCreate, UserResponse, AdminCreate # For registration
 from app.dependencies import get_async_db
 from app.services.auth_service import auth_service
@@ -93,3 +93,19 @@ async def read_users_me(
     Get current logged-in user.
     """
     return current_user
+
+@router.get("/admin/overview", response_model=OverviewResponse)
+async def read_overview(
+    #current_user: User = Depends(get_current_active_admin),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get overview of the books, audiobooks, teachings, places, temples, festivals, and stories.
+    This endpoint is for admin users to get a quick overview of the system.
+    """
+    overview = await auth_service.get_overview(db=db)
+    if not overview:
+        raise HTTPException(status_code=404, detail="Overview not found")
+    
+    return overview
+

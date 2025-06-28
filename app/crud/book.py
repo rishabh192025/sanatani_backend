@@ -206,6 +206,53 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         items = data_result.scalars().all()
         
         return items, total_count
+    
+    async def get_books_count(
+        self, 
+        db: AsyncSession,
+        *, 
+        content_type: Optional[str] = None,
+        category_id_str: Optional[str] = None,
+        language_str: Optional[str] = None,
+        status_str: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> int:
+        query = select(func.count(Content.id)).select_from(Content)
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value)
+        # Apply filters
+        filters = []
+        if content_type:
+            try:
+                ct_enum_val = ContentTypeEnum[content_type.upper()].value
+                filters.append(Content.content_type == ct_enum_val)
+            except KeyError:
+                pass
+        if category_id_str:
+            try:
+                cat_uuid = PyUUID(category_id_str)
+                filters.append(Content.category_id == cat_uuid)
+            except ValueError:
+                pass
+        if language_str:
+            try:
+                lang_enum_val = LanguageCodeEnum[language_str.upper()].value
+                filters.append(Content.language == lang_enum_val)
+            except KeyError:
+                pass
+        if status_str:
+            try:
+                status_enum_val = ContentStatus[status_str.upper()].value
+                filters.append(Content.status == status_enum_val)
+            except KeyError:
+                pass
+        if search_query:
+            search_term = f"%{search_query}%"
+            filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
+        if filters:
+            query = query.where(*filters)
+        result = await db.execute(query)
+        return result.scalar_one()
+
 
     async def get_book_by_slug(
         self, 

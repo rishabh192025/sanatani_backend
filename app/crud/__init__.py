@@ -18,3 +18,5 @@ from .pilgrimage_route import pilgrimage_route_crud
 
 from .festival import festival_crud
 
+from .contact_submission import contact_submission_crud
+
