@@ -82,6 +82,13 @@ class CRUDContactSubmission(CRUDBase[ContactSubmission, ContactSubmissionCreate,
             db_obj.resolved_by_id = resolver_id
 
         return await super().update(db=db, db_obj=db_obj, obj_in=update_data)
+    
+    async def delete_submission(
+        self, db: AsyncSession, *, submission_id: PyUUID
+    ) -> Optional[ContactSubmission]:
+        # Use the base delete method
+        return await super().remove(db=db, id=submission_id)
+    
 
 
 

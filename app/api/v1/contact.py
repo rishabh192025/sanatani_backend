@@ -122,3 +122,18 @@ async def update_submission(
         #resolver_id=current_user.id
     )
     return updated_submission
+
+@router.delete(
+    "/{submission_id}",
+    response_model=ContactSubmissionResponse,
+    summary="Delete a submission (Admin/Moderator)"
+)
+async def delete_submission(
+    submission_id: PyUUID,
+    db: AsyncSession = Depends(get_async_db),
+    #current_user: User = Depends(get_current_active_moderator_or_admin)
+):
+    deleted_submission = await contact_submission_crud.delete_submission(db=db, submission_id=submission_id)
+    if not deleted_submission:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    return deleted_submission
