@@ -10,7 +10,6 @@ from app.crud.book import book_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
 from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
-from app.services.file_service import file_service
 from app.models.content import BookType as ModelBookTypeEnum # For mapping back in response
 from app.models.content import ContentType as ModelContentTypeEnum
 from app.crud.book_chapter import book_chapter_crud # New
