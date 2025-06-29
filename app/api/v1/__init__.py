@@ -21,7 +21,7 @@ from . import pilgrimage_route
 
 from . import festivals
 from . import contact
-
+from . import chat_with_guruji
 
 # api_router_v1 = APIRouter()
 # api_router_v1.include_router(auth.router, prefix="/auth", tags=["Authentication"])

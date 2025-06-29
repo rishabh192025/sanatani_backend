@@ -29,4 +29,4 @@ from .contact_submission import (
     ContactSubmissionCreate,
     ContactSubmissionResponse, ContactSubmissionUpdateAdmin, ResolverInfo
 )
-
+from .chat_with_guruji import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse
