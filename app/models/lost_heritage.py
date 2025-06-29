@@ -26,7 +26,7 @@ class LostHeritage(Base):
     gallery_images = Column(JSON, nullable=True)       # list of images
 
     # Metadata
-    category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     location = Column(String(1000), nullable=True, index=True)
     time_period = Column(String(200), nullable=True)       # eg. 5th Century BCE
     historical_significance = Column(Text, nullable=True)
