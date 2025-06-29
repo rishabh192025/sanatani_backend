@@ -7,10 +7,10 @@ from uuid import UUID as PyUUID
 
 from app.crud.festival import festival_crud
 from app.schemas.festival import FestivalCreate, FestivalUpdate, FestivalResponse
-from app.schemas.pagination import PaginatedResponse # Import your pagination schema
+from app.schemas.pagination import PaginatedResponse
 from app.database import get_async_db
-from app.dependencies import get_current_user # Assuming authentication
-from app.models.user import User # For type hinting
+from app.dependencies import get_current_user
+from app.models.user import User
 
 router = APIRouter()
 

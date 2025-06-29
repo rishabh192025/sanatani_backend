@@ -1,7 +1,6 @@
 # app/api/v1/homepage.py
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession # If DB interaction was needed
-# from app.dependencies import get_async_db # If DB interaction was needed
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.homepage import HomepageCard, HomepageCardsResponse
 

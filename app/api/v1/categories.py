@@ -4,11 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID as PyUUID
 
-from app.dependencies import get_async_db, get_current_active_admin # Admin for create/update/delete
+from app.dependencies import get_async_db, get_current_active_admin
 from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdate
 from app.schemas.pagination import PaginatedResponse
 from app.crud.category import category_crud
-from app.models.category import CategoryScopeType, Category # Import model for type hint
+from app.models.category import CategoryScopeType, Category
 
 router = APIRouter()
 

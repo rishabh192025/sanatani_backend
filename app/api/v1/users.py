@@ -5,9 +5,9 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.dependencies import get_async_db, get_current_user, get_current_active_admin
-from app.schemas.user import UserResponse, UserCreate, UserUpdate # Ensure these exist
+from app.schemas.user import UserResponse, UserCreate, UserUpdate
 from app.crud.user import user_crud
-from app.models.user import User # For type hinting
+from app.models.user import User
 
 router = APIRouter()
 

@@ -9,13 +9,13 @@ from app.schemas.book import BookCreate, BookResponse, BookUpdate
 from app.crud.book import book_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
-from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
-from app.models.content import BookType as ModelBookTypeEnum # For mapping back in response
+from app.models.content import Content, ContentStatus, ContentType, ContentSubType
+from app.models.content import BookType as ModelBookTypeEnum
 from app.models.content import ContentType as ModelContentTypeEnum
-from app.crud.book_chapter import book_chapter_crud # New
-from app.crud.book_section import book_section_crud # New
+from app.crud.book_chapter import book_chapter_crud
+from app.crud.book_section import book_section_crud 
 from app.schemas.book_chapter import (
-    BookChapterCreate, # Using specific if you keep them separate
+    BookChapterCreate,
     BookChapterResponse,
     BookChapterUpdate, BookChapterResponseWithoutSections
 

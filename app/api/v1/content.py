@@ -6,19 +6,18 @@ from uuid import UUID as PyUUID
 
 from app.database import get_async_db
 from app.schemas.content import ContentCreate, ContentResponse, ContentUpdate
-from app.schemas.content_chapter import ( # Import chapter schemas
+from app.schemas.content_chapter import (
     ContentChapterCreate, ContentChapterResponse, ContentChapterUpdate
 )
-from app.schemas.content_section import ( # Import section schemas
+from app.schemas.content_section import (
     ContentSectionCreate, ContentSectionResponse, ContentSectionUpdate
 )
-from app.crud.content_section import content_section_crud # Import section CRUD
+from app.crud.content_section import content_section_crud
 from app.crud.content import content_crud
-from app.crud.content_chapter import content_chapter_crud # Import chapter CRUD
+from app.crud.content_chapter import content_chapter_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
-from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
-from app.services.file_service import file_service
+from app.models.content import Content, ContentStatus, ContentType, ContentSubType
 
 router = APIRouter()
 
@@ -135,45 +134,7 @@ async def delete_existing_content( # Renamed
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
     
     await content_crud.remove(db=db, id=content_id)
-    return # No content response for 204
-
-
-@router.post("/{content_id}/upload-file", summary="Upload a primary file for content (e.g., PDF, MP3)")
-async def upload_content_main_file( # Renamed for clarity
-    content_id: PyUUID,
-    file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user), # Granular check below
-    db: AsyncSession = Depends(get_async_db) # Changed
-):
-    """
-    Upload a main file associated with a content item.
-    Requires Admin, Moderator, or content author.
-    """
-    db_content = await content_crud.get_content(db, content_id=content_id)
-    if not db_content:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = db_content.author_id == current_user.id
-    
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    
-    # Use file_service to handle the upload
-    # This service would save the file, potentially to S3 or local storage,
-    # and then update the db_content.file_url and db_content.file_size
-    try:
-        file_url, file_size = await file_service.upload_content_file(
-            db=db, 
-            content_obj=db_content, 
-            file=file, 
-            upload_dir_prefix="content_files"
-        )
-        # The file_service should commit the changes to db_content
-        return {"message": "File uploaded successfully", "file_url": file_url, "file_size": file_size}
-    except Exception as e:
-        # Log the exception
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
+    return
 
 # Add similar endpoints for cover_image_url and thumbnail_url if direct upload is desired for them too.
 
@@ -293,36 +254,6 @@ async def delete_specific_chapter(
     
     await content_chapter_crud.remove(db=db, id=chapter_id)
     return
-
-# --- File Upload Endpoint for Content (main file, not chapter specific audio/video) ---
-@router.post("/{content_id}/upload-main-file", summary="Upload a primary file for content (e.g., PDF, MP3 for whole book/album)")
-async def upload_content_main_file(
-    content_id: PyUUID,
-    file: UploadFile = File(...),
-    #current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_db)
-):
-    db_content = await content_crud.get_content(db, content_id=content_id)
-    if not db_content:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
-
-    is_admin_or_moderator = current_user.role in ["admin", "moderator"]
-    is_author = db_content.author_id == current_user.id
-    if not (is_admin_or_moderator or is_author):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    
-    try:
-        # This updates content_obj.file_url and file_size
-        file_url, file_size = await file_service.upload_content_file(
-            db=db, content_obj=db_content, file=file, upload_dir_prefix="content_main_files"
-        )
-        return {"message": "Main content file uploaded successfully", "file_url": file_url, "file_size_bytes": file_size}
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"File upload failed: {str(e)}")
-
-# You would need similar upload endpoints for chapter-specific audio/video if ContentChapter.audio_url etc.
-# are to be populated via direct uploads rather than just string URLs.
-# E.g., POST /{content_id}/chapters/{chapter_id}/upload-audio
 
 
 @router.post(

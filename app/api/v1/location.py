@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy.future import select # Changed for SQLAlchemy 1.4+ style with async
+from sqlalchemy.future import select
 from ...database import get_async_db
 from ...models.location import Region, State, City, Country
 from ...schemas.location import RegionResponse, StateResponse, CityResponse, CountryResponse

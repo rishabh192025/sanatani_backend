@@ -2,8 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-# ... other necessary imports ...
-from app.schemas.teaching import TeachingCreate, TeachingUpdate, TeachingResponse # Use specific teaching schemas
+from app.schemas.teaching import TeachingCreate, TeachingUpdate, TeachingResponse
 from app.schemas.pagination import PaginatedResponse
 from app.crud.teaching import teaching_crud
 from app.models.user import User, UserRole

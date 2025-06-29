@@ -1,18 +1,18 @@
 # app/api/v1/auth.py
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm # For form data
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.auth import Token, UserLogin, Msg, OverviewResponse # UserLogin for request body
-from app.schemas.user import UserCreate, UserResponse, AdminCreate # For registration
+from app.schemas.auth import Token, UserLogin, Msg, OverviewResponse
+from app.schemas.user import UserCreate, UserResponse, AdminCreate
 from app.dependencies import get_async_db
 from app.services.auth_service import auth_service
 from app.config import settings
-from app.utils.security import create_access_token # For refresh token endpoint
+from app.utils.security import create_access_token
 from jose import jwt, JWTError
-from app.crud.user import user_crud # For fetching user during refresh
-from app.dependencies import get_current_user, get_current_active_admin # For /me endpoint
-from app.models.user import User # For type hinting
+from app.crud.user import user_crud
+from app.dependencies import get_current_user, get_current_active_admin
+from app.models.user import User
 
 router = APIRouter()
 
