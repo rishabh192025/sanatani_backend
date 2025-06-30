@@ -14,6 +14,7 @@ class ChatWithGurujiCreate(BaseModel):
     messages: Optional[List[dict]] = None
     source: Optional[SourceType] = SourceType.ELEVEN_LABS
     is_active: Optional[bool] = True
+    title: Optional[str] = None  # Optional title for the chat
 
 class ChatWithGurujiUpdate(BaseModel):
     chat_id: Optional[str] = None
