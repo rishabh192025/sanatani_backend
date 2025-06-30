@@ -39,7 +39,7 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(data_query)
         items = result.scalars().all()
 

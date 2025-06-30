@@ -19,20 +19,20 @@ async def create_chat(
 ):
     existing_chat = await chat_with_guruji_crud.get_by_chat_id(db, chat_id=chat_with_guruji_in.chat_id)
     if existing_chat:
-        result = await chat_with_guruji_crud.update(
+        updated_chat = await chat_with_guruji_crud.update(
             db=db,
             db_obj=existing_chat,
             obj_in=chat_with_guruji_in
         )
-        return result
+        return updated_chat
 
-    result = await chat_with_guruji_crud.create_chat_with_guruji(
+    new_chat = await chat_with_guruji_crud.create_chat_with_guruji(
         db=db,
         obj_in=chat_with_guruji_in,
         # user_id = current_user.id,
         user_id = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
     )
-    return result
+    return new_chat
 
 
 @router.get("", response_model=PaginatedResponse[ChatWithGurujiResponse])
