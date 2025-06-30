@@ -28,6 +28,7 @@ class ChatWithGurujiResponse(BaseModel):
     messages: Optional[List[dict]] = None
     user_id: Optional[UUID] = None
     source: Optional[SourceType] = None
+    title: Optional[str] = None
 
     is_active: Optional[bool] = True
 
