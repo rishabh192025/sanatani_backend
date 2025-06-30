@@ -69,6 +69,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         # Example: if password needs to be updated, it should be handled separately
         # and not directly through CRUDBase.update if obj_in contains plain password
         update_data = obj_in.model_dump(exclude_unset=True)
+        update_data["role"] = obj_in.role.value if obj_in.role is not None else db_obj.role.value # Ensure role is set correctly
         if "password" in update_data: # This should not happen if UserUpdate doesn't have password
             del update_data["password"] # Or raise error
         
