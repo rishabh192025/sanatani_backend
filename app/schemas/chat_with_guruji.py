@@ -6,7 +6,7 @@ from uuid import UUID
 
 
 class SourceType(str, Enum):
-    ELEVEN_LABS = "eleven labs"
+    ELEVEN_LABS = "eleven_labs"
 
 
 class ChatWithGurujiCreate(BaseModel):
