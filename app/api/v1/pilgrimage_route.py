@@ -9,7 +9,6 @@ from ...schemas import PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageR
 from ...database import get_async_db
 from ...schemas.pilgrimage_route import DifficultyType, DurationType
 
-
 router = APIRouter()
 
 
@@ -45,18 +44,21 @@ async def create_pilgrimage_route(
 @router.get("", response_model=PaginatedResponse[PilgrimageRouteResponse])
 async def list_all_pilgrimage_routes(
     request: Request,  # Add this to build next/prev URLs
-    name: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),            # changed name to search to match UI
+    difficulty_level: Optional[DifficultyType] = Query(None),
+    estimated_duration: Optional[DurationType] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
 ):
     """
     Retrieve all PilgrimageRoutes if no filters are added else returns the filtered ones.
-    As of now only from admin side search by name filtered is applied, if required any for user side will add.
     """
     routes, total_count = await pilgrimage_route_crud.get_filtered_with_count(
         db=db,
-        name=name,
+        search=search,
+        difficulty_level=difficulty_level,
+        estimated_duration=estimated_duration,
         skip=skip,
         limit=limit,
     )

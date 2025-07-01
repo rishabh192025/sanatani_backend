@@ -7,7 +7,6 @@ from uuid import UUID
 
 
 class DifficultyType(str, Enum):
-    ALL = "All_Difficulties"
     EASY = "Easy"
     MODERATE = "Moderate"
     CHALLENGING = "Challenging"
@@ -15,7 +14,6 @@ class DifficultyType(str, Enum):
 
 
 class DurationType(str, Enum):
-    ALL = "All_Durations"
     ONE_TO_THREE_DAYS = "1-3 days"
     FOUR_TO_SEVEN_DAYS = "4-7 days"
     ONE_TO_TWO_WEEKS = "1-2 weeks"
