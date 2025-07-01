@@ -24,6 +24,12 @@ class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):
         result = await db.execute(select(self.model).where(self.model.name == name))
         return result.scalar_one_or_none()
 
+    async def get_by_ids(self, db: AsyncSession, ids: List[UUID]) -> List[Place]:
+        if not ids:
+            return []
+        result = await db.execute(select(self.model).where(self.model.id.in_(ids)))
+        return result.scalars().all()
+
     async def get_all(self, db: AsyncSession) -> List[Place]:
         result = await db.execute(select(self.model))
         return result.scalars().all()

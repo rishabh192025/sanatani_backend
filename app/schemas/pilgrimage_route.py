@@ -59,3 +59,24 @@ class PilgrimageRouteResponse(PilgrimageRouteBase):
 
     class Config:           # Only needed in this as this only involves converting from ORM objects
         from_attributes = True
+
+class PilgrimagePlace(BaseModel):
+    id: UUID
+    name: str
+    latitude: Optional[float] = 0.0
+    longitude: Optional[float] = 0.0
+
+    class Config:
+        from_attributes = True
+
+class PilgrimageRouteResponseWithStops(PilgrimageRouteBase):
+    id: UUID
+    # category_id: Optional[UUID] = None
+    name: Optional[str] = None
+    stops: Optional[List[PilgrimagePlace]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[UUID] = None
+
+    class Config:
+        from_attributes = True

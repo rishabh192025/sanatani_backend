@@ -3,9 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import pilgrimage_route_crud
+from ...crud import pilgrimage_route_crud, place_crud
 from ...dependencies import get_current_active_admin
-from ...schemas import PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageRouteResponse, PaginatedResponse
+from ...schemas import (
+    PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimagePlace,
+    PilgrimageRouteResponse, PaginatedResponse, PilgrimageRouteResponseWithStops
+)
 from ...database import get_async_db
 from ...schemas.pilgrimage_route import DifficultyType, DurationType
 
@@ -97,7 +100,7 @@ async def list_all_duration_types():
     return [key.value for key in DurationType]
 
 
-@router.get("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponse)
+@router.get("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponseWithStops)
 async def get_pilgrimage_route(pilgrimage_route_id: UUID, db: AsyncSession = Depends(get_async_db)):
     pilgrimage_route = await pilgrimage_route_crud.get(db=db, id=pilgrimage_route_id)
     if not pilgrimage_route:
@@ -108,7 +111,13 @@ async def get_pilgrimage_route(pilgrimage_route_id: UUID, db: AsyncSession = Dep
     await db.commit()       # Commit to make it permanent
     await db.refresh(pilgrimage_route)     # Refresh to re-fetch any auto-updated fields (optional)
 
-    return pilgrimage_route
+    
+    places = await place_crud.get_by_ids(db=db, ids=pilgrimage_route.route_path)
+    pilgrimage_route_response = PilgrimageRouteResponseWithStops.model_validate(pilgrimage_route)
+    pilgrimage_route_response.stops = [
+        PilgrimagePlace.model_validate(place) for place in places
+    ]
+    return pilgrimage_route_response
 
 
 @router.put("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponse)
