@@ -1,6 +1,6 @@
 # app/schemas/contact_submission.py
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -39,3 +39,11 @@ class ContactSubmissionResponse(BaseModel):
 class ContactSubmissionUpdateAdmin(BaseModel):
     status: Optional[ContactStatus] = None
     admin_notes: Optional[str] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def convert_enum_input(cls, v):
+        # Allow "IN_PROGRESS" as alias for "IN PROGRESS"
+        if v == "IN_PROGRESS":
+            return "IN PROGRESS"
+        return v
