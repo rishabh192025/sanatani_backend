@@ -12,7 +12,7 @@ from app.models.user import User  # For the relationship
 
 class ContactStatus(PyEnum):
     NEW = "NEW"
-    IN_PROGRESS = "IN_PROGRESS"
+    IN_PROGRESS = "IN PROGRESS"
     RESOLVED = "RESOLVED"
     ARCHIVED = "ARCHIVED"
 
