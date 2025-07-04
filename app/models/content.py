@@ -77,6 +77,7 @@ class Content(Base):
     narrator = Column(String(200), nullable=True)
     published_at = Column(DateTime, nullable=True)
     featured = Column(Boolean, default=False)
+    content = Column(Text, nullable=True)
     premium_content = Column(Boolean, default=False)
     view_count = Column(Integer, default=0)
     download_count = Column(Integer, default=0)
