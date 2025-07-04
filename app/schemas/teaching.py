@@ -55,8 +55,8 @@ class TeachingResponse(TeachingBase): # Inherits fields from TeachingBase
     #sub_type: str    # Will be TEACHING
     
     file_url: Optional[str] = None     
-    duration: Optional[int] = None     
-
+    duration: Optional[int] = None
+    view_count: Optional[int] = None
     author_id: Optional[UUID] = None
     author_name: Optional[str] = None
     category_id: Optional[UUID] = None # Or str
