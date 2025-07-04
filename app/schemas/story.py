@@ -11,6 +11,7 @@ class StoryBase(BaseModel):
     description: Optional[str] = None
     language: str = LanguageCode.EN.value # Defaulting
     tags: Optional[List[str]] = Field(None, max_items=20)
+    content: Optional[str] = None
     cover_image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     # No file_url for text stories usually, unless it's an attachment
