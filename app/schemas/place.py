@@ -7,7 +7,7 @@ from uuid import UUID
 
 
 class PlaceBase(BaseModel):
-    country_id: Optional[UUID] = None
+    country_id: Optional[UUID] = UUID("ed2cff2f-6065-4a63-a921-73b2af99a0b9")  # Default to India
     region_id: Optional[UUID] = None
     state_id: Optional[UUID] = None
     city_id: Optional[UUID] = None
