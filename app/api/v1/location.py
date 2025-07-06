@@ -2,17 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
-
-from sqlalchemy.future import select
-from ...database import get_async_db
-from ...models.location import Region, State, City, Country
-from ...schemas.location import RegionResponse, StateResponse, CityResponse, CountryResponse
-
+from sqlalchemy.future import select # Changed for SQLAlchemy 1.4+ style with async
+from app.database import get_async_db
+from app.models.location import Region, State, City, Country
+from app.schemas.location import RegionResponse, StateResponse, CityResponse, CountryResponse
 
 router = APIRouter()
 
 # These APIs are used to fetch country, region, state, city in drop down while creating new place, temple, etc.
-
 
 @router.get("/countries", response_model=List[CountryResponse])
 async def get_all_countries(db: AsyncSession = Depends(get_async_db)):

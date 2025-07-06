@@ -22,13 +22,13 @@ ITEM_TAG = "Collection Items" # For sub-resources
 async def create_new_collection_api(
     collection_in: CollectionCreate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     collection = await collection_crud.create_collection(
         db=db, 
         obj_in=collection_in, 
-        curator_id="1f3d72a7-f5cf-4200-8300-77c13cad6117" # For now, hardcoded curator ID
-        #curator_id=current_user.id # Assign current user as curator
+        #curator_id="1f3d72a7-f5cf-4200-8300-77c13cad6117" # For now, hardcoded curator ID
+        curator_id=current_user.id # Assign current user as curator
     )
     print(collection)
     # The CollectionResponse has items: List[CollectionItemResponse] = [], so it will be empty here.
@@ -41,6 +41,7 @@ async def list_all_collections_api(
     limit: int = Query(10, ge=1, le=100),
     is_featured: Optional[bool] = Query(None),
     # curator_id: Optional[PyUUID] = Query(None), # If you want to filter by curator
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user
     db: AsyncSession = Depends(get_async_db),
 ):
     # For public listing, default is_public=True
@@ -70,6 +71,7 @@ async def list_all_collections_api(
 @router.get("/{collection_id_or_slug}", response_model=CollectionResponseWithItems, tags=[COLLECTION_TAG])
 async def get_single_collection_api(
     collection_id_or_slug: str,
+    current_user: User = Depends(get_current_user), # Optional: if you want to check permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     collection_model_from_db = None # Renamed for clarity
@@ -118,7 +120,7 @@ async def update_existing_collection_api(
     collection_id: PyUUID,
     collection_in: CollectionUpdate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     db_collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)
     if not db_collection:
@@ -145,7 +147,7 @@ async def update_existing_collection_api(
 async def delete_existing_collection_api(
     collection_id: PyUUID,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     db_collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)
     if not db_collection:
@@ -165,7 +167,7 @@ async def add_item_to_collection_api( # Renamed from endpoint
     collection_id: PyUUID,
     item_in: CollectionItemCreate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)
     if not collection:
@@ -197,7 +199,7 @@ async def update_collection_item_api( # Renamed from endpoint
     item_id: PyUUID,
     item_in: CollectionItemUpdate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     db_item = await collection_item_crud.get_collection_item_by_id(db, item_id=item_id)
     if not db_item or db_item.collection_id != collection_id:
@@ -216,7 +218,7 @@ async def remove_item_from_collection_api( # Renamed from endpoint
     collection_id: PyUUID,
     item_id: PyUUID,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     # Permission check (based on parent collection)
     collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)
@@ -238,9 +240,8 @@ async def list_items_in_collection_api(
     collection_id: PyUUID,
     skip: int = Query(0, ge=0, description="Number of items to skip"),
     limit: int = Query(10, ge=1, le=100, description="Number of items per page"),
-    # load_content: bool = Query(True, description="Whether to include full content details"), # Control via CRUD
+    current_user: User = Depends(get_current_user), # Optional: if collection visibility depends on user
     db: AsyncSession = Depends(get_async_db),
-    # current_user: User = Depends(get_current_user) # Optional: if collection visibility depends on user
 ):
     # Check if collection exists and if user has permission to view it
     collection = await collection_crud.get_collection_by_id(db, collection_id=collection_id)

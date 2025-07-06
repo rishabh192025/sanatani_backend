@@ -27,53 +27,34 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(select(User).filter(User.username == username))
         return result.scalar_one_or_none()
 
-    async def create_user(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
-        db_obj = User(
-            email=obj_in.email,
-            hashed_password=get_password_hash(obj_in.password), # Password hashing is sync
-            username=obj_in.username,
-            first_name=obj_in.first_name,
-            last_name=obj_in.last_name,
-            is_active=obj_in.is_active if obj_in.is_active is not None else True,
-            is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
-            role=UserRole.USER.value,  # Default role, can be changed later
-            preferred_language=obj_in.preferred_language
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    async def create_admin_user(self, db: AsyncSession, *, obj_in: AdminCreate) -> User:
-        db_obj = User(
-            email=obj_in.email,
-            hashed_password=get_password_hash(obj_in.password), # Password hashing is sync
-            username=obj_in.username,
-            first_name=obj_in.first_name,
-            last_name=obj_in.last_name,
-            is_active=obj_in.is_active if obj_in.is_active is not None else True,
-            is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
-            role=UserRole.ADMIN.value,  # Default role, can be changed later
-            preferred_language=obj_in.preferred_language
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    # update method can be inherited from CRUDBase if standard update is sufficient
-    # If specific logic is needed for user update (e.g., password change), implement here
     async def update_user(
         self, db: AsyncSession, *, db_obj: User, obj_in: UserUpdate
     ) -> User:
+
         # Example: if password needs to be updated, it should be handled separately
         # and not directly through CRUDBase.update if obj_in contains plain password
         update_data = obj_in.model_dump(exclude_unset=True)
         update_data["role"] = obj_in.role.value if obj_in.role is not None else db_obj.role.value # Ensure role is set correctly
         if "password" in update_data: # This should not happen if UserUpdate doesn't have password
             del update_data["password"] # Or raise error
+
+        # Handle role update specifically
+        if "role" in update_data and update_data["role"] is not None:
+            # Ensure the role value is valid (e.g., from your UserRole enum)
+            try:
+                role_value = UserRole(update_data["role"]).value # Validate and get string value
+                setattr(db_obj, "role", role_value)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid role: {update_data['role']}")
+            del update_data["role"] # Remove from dict if handled separately
+
+        # Apply other updates
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
         
-        return await super().update(db, db_obj=db_obj, obj_in=update_data)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
 
     async def get_user_by_clerk_id(self, db: AsyncSession, *, clerk_user_id: str) -> Optional[User]:
         result = await db.execute(select(User).filter(User.clerk_user_id == clerk_user_id))

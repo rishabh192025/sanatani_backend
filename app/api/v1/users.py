@@ -11,43 +11,13 @@ from app.models.user import User
 
 router = APIRouter()
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_user(
-    user_in: UserCreate,
-    db: AsyncSession = Depends(get_async_db),
-    current_admin: User = Depends(get_current_active_admin) # Optional: only admins can create users
-):
-    """
-    Create a new user.
-    Consider if this should be public or admin-only (like registration).
-    Registration is typically public, so this might be for admin creation.
-    If for registration, it should likely be in auth.py or a public user endpoint.
-    For now, assuming admin creation or it will be moved to auth.py.
-    """
-    existing_user = await user_crud.get_user_by_email(db, email=user_in.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists.",
-        )
-    if user_in.username:
-        existing_username = await user_crud.get_user_by_username(db, username=user_in.username)
-        if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This username is already taken.",
-            )
-    
-    user = await user_crud.create_user(db=db, obj_in=user_in)
-    return user
-
 
 @router.get("", response_model=List[UserResponse])
 async def read_all_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
-    #current_admin: User = Depends(get_current_active_admin) # Only admins can list all users
+    current_admin: User = Depends(get_current_active_admin) # Only admins can list all users
 ):
     """
     Retrieve all users. Admin access required.
@@ -93,7 +63,7 @@ async def read_user_by_id(
     Get a specific user by ID.
     Admins can get any user. Regular users might only get their own (covered by /me).
     """
-    if current_user.role != "admin" and current_user.id != user_id: # Using string role for now
+    if current_user.role != UserRole.ADMIN.value: # Using string role for now
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
     user = await user_crud.get_user(db, user_id=user_id)
@@ -124,21 +94,21 @@ async def update_user_by_id(
     updated_user = await user_crud.update_user(db=db, db_obj=db_user, obj_in=user_in)
     return updated_user
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user_by_id(
-    user_id: UUID,
-    db: AsyncSession = Depends(get_async_db),
-    current_admin: User = Depends(get_current_active_admin) # Only admins can delete users
-):
-    """
-    Delete a user by ID. Admin access required.
-    Consider soft delete.
-    """
-    db_user = await user_crud.get_user(db, user_id=user_id)
-    if not db_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    if db_user.id == current_admin.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot delete themselves.")
+# @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_user_by_id(
+#     user_id: UUID,
+#     db: AsyncSession = Depends(get_async_db),
+#     current_admin: User = Depends(get_current_active_admin) # Only admins can delete users
+# ):
+#     """
+#     Delete a user by ID. Admin access required.
+#     Consider soft delete.
+#     """
+#     db_user = await user_crud.get_user(db, user_id=user_id)
+#     if not db_user:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+#     if db_user.id == current_admin.id:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin cannot delete themselves.")
     
-    await user_crud.remove(db=db, id=user_id)
-    return # No content
+#     await user_crud.remove(db=db, id=user_id)
+#     return # No content
