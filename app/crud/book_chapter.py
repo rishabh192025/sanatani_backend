@@ -1,5 +1,5 @@
 # app/crud/book_chapter.py
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -17,7 +17,6 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
         result = await db.execute(
             select(func.max(BookChapter.chapter_number))
             .filter(BookChapter.book_id == book_id)
-            .filter(BookChapter.is_deleted.is_(False))
         )
         max_num = result.scalar_one_or_none()
         return max_num if max_num is not None else 0
@@ -46,7 +45,6 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
         query = (
             select(self.model)
             .filter(BookChapter.book_id == book_id)
-            .filter(BookChapter.is_deleted.is_(False))
             .order_by(BookChapter.chapter_number)
             .offset(skip)
             .limit(limit)
@@ -71,14 +69,14 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
         common_filters = [BookChapter.book_id == book_id]
 
         # Count query
-        count_query = select(func.count(BookChapter.id)).select_from(BookChapter).where(*common_filters,BookChapter.is_deleted.is_(False))
+        count_query = select(func.count(BookChapter.id)).select_from(BookChapter).where(*common_filters)
         total_count_result = await db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
         # Data query
         data_query = (
             select(self.model)
-            .where(*common_filters,self.model.is_deleted.is_(False))
+            .where(*common_filters)
             .order_by(BookChapter.chapter_number)
             .offset(skip)
             .limit(limit)
@@ -94,7 +92,7 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
     async def get_chapter_by_id(
         self, db: AsyncSession, *, chapter_id: UUID, book_id: Optional[UUID] = None, load_sections: bool = False
     ) -> Optional[BookChapter]:
-        query = select(self.model).filter(self.model.id == chapter_id).filter(self.model.is_deleted.is_(False))
+        query = select(self.model).filter(self.model.id == chapter_id)
         if book_id: # Optional: ensure it belongs to a specific book
             query = query.filter(self.model.book_id == book_id)
         
@@ -111,8 +109,7 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
             select(self.model).filter(
                 and_(
                     BookChapter.book_id == book_id,
-                    BookChapter.chapter_number == chapter_number,
-                    BookChapter.is_deleted.is_(False)
+                    BookChapter.chapter_number == chapter_number
                 )
             )
         )
@@ -131,6 +128,15 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
         
         # Use the generic update from CRUDBase
         return await super().update(db, db_obj=db_obj, obj_in=obj_in)
+
+    async def remove_chapter(self, db: AsyncSession, *, id: Union[UUID, int, str]) -> Optional[BookChapter]:
+        # For async, db.get is not directly available, so we fetch first
+        obj = await self.get(db, id=id)
+        if obj:
+            await db.delete(obj)
+            await db.commit()
+
+        return obj
 
 
 book_chapter_crud = CRUDBookChapter(BookChapter)

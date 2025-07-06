@@ -1,5 +1,5 @@
 # app/crud/book_section.py
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -17,7 +17,6 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         result = await db.execute(
             select(func.max(BookSection.section_order))
             .filter(BookSection.chapter_id == chapter_id)
-            .filter(BookSection.is_deleted.is_(False))
         )
         max_order = result.scalar_one_or_none()
         return max_order if max_order is not None else -1 # Start order from 0, so next is max_order + 1
@@ -53,14 +52,14 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         common_filters = [BookSection.chapter_id == chapter_id]
 
         # Count query
-        count_query = select(func.count(BookSection.id)).select_from(BookSection).where(*common_filters,BookSection.is_deleted.is_(False))
+        count_query = select(func.count(BookSection.id)).select_from(BookSection).where(*common_filters)
         total_count_result = await db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
         # Data query
         data_query = (
             select(self.model)
-            .where(*common_filters,self.model.is_deleted.is_(False))
+            .where(*common_filters)
             .order_by(BookSection.section_order)
             .offset(skip)
             .limit(limit)
@@ -76,7 +75,6 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         result = await db.execute(
             select(self.model)
             .filter(BookSection.chapter_id == chapter_id)
-            .filter(BookSection.is_deleted.is_(False))
             .order_by(BookSection.section_order)
             .offset(skip)
             .limit(limit)
@@ -86,7 +84,7 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
     async def get_section_by_id(
         self, db: AsyncSession, *, section_id: UUID, chapter_id: Optional[UUID] = None
     ) -> Optional[BookSection]:
-        query = select(self.model).filter(self.model.id == section_id).filter(BookSection.is_deleted.is_(False))
+        query = select(self.model).filter(self.model.id == section_id)
         if chapter_id:
             query = query.filter(self.model.chapter_id == chapter_id)
         result = await db.execute(query)
@@ -99,8 +97,7 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
             select(self.model).filter(
                 and_(
                     BookSection.chapter_id == chapter_id,
-                    BookSection.section_order == section_order,
-                    BookSection.is_deleted.is_(False)
+                    BookSection.section_order == section_order
                 )
             )
         )
@@ -121,5 +118,16 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
                 raise ValueError(f"Section order {update_data['section_order']} already exists for this chapter.")
         
         return await super().update(db, db_obj=db_obj, obj_in=update_data) # Pass dict to base update
+
+
+    async def remove_section(self, db: AsyncSession, *, id: Union[UUID, int, str]) -> Optional[BookSection]:
+        # For async, db.get is not directly available, so we fetch first
+        obj = await self.get(db, id=id)
+        if obj:
+            await db.delete(obj)
+            await db.commit()
+
+        return obj
+
 
 book_section_crud = CRUDBookSection(BookSection)

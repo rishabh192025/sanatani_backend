@@ -389,7 +389,7 @@ async def delete_book_chapter_route(
     if not chapter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chapter not found or does not belong to this book")
     
-    await book_chapter_crud.remove(db=db, id=chapter_id)
+    await book_chapter_crud.remove_chapter(db=db, id=chapter_id)
     return
 
 @router.post(
@@ -542,7 +542,7 @@ async def delete_book_section_route(
     if not section:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to this chapter")
     
-    await book_section_crud.remove(db=db, id=section_id)
+    await book_section_crud.remove_section(db=db, id=section_id)
     return
 
 @router.get(
