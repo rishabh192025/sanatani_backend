@@ -12,7 +12,7 @@ from app.schemas.collection import (
 from app.schemas.pagination import PaginatedResponse
 from app.crud.collection import collection_crud, collection_item_crud
 from app.models.user import User
-from app.models.content import Content # For checking content existence
+from app.models.content import Content
 
 router = APIRouter()
 COLLECTION_TAG = "Collections"

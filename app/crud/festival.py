@@ -116,8 +116,24 @@ class CRUDFestival(CRUDBase[Festival, FestivalCreate, FestivalUpdate]):
         
         return items, total_count
 
-    # update method can be inherited from CRUDBase if obj_in is FestivalUpdate
-    # If custom logic like checking name uniqueness on update is needed:
+    async def get_festivals_count(
+        self, db: AsyncSession,
+        *, 
+        state_id: Optional[PyUUID] = None, 
+        is_major: Optional[bool] = None
+    ) -> int:
+        count_query = select(func.count(self.model.id)).select_from(self.model)
+        filters = []
+        if state_id is not None:
+            filters.append(self.model.state_id == state_id)
+        if is_major is not None:
+            filters.append(self.model.is_major_festival == is_major)
+        if filters:
+            count_query = count_query.where(*filters)
+        total_count_result = await db.execute(count_query)
+        total_count = total_count_result.scalar_one()
+        return total_count
+
     async def update_festival(
         self, db: AsyncSession, *, db_obj: Festival, obj_in: FestivalUpdate
     ) -> Festival:

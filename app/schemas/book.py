@@ -23,7 +23,7 @@ class BookCreate(BookBase):
     author_name: Optional[str] = Field(None, max_length=200) 
     status: Optional[str] = ContentStatus.PUBLISHED.value
     featured: Optional[bool] = False
-    book_type : Optional[BookType] = None
+    book_format : Optional[BookType] = None
 
 class BookUpdate(BaseModel): # Does not inherit BookBase
     title: Optional[str] = Field(None, min_length=3, max_length=300)

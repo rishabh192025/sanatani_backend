@@ -11,6 +11,8 @@ from .pilgrimage_route import PilgrimageRoute
 from .content import Content, ContentType, ContentStatus, BookChapter, BookSection
 from .collection import Collection, CollectionItem
 from .festival import Festival
+from .contact_submission import ContactSubmission, ContactStatus
+from .chat_with_guruji import ChatWithGuruji
 
 # from .content import ContentChapter, ContentTranslation # Add when created
 # from .places import SacredPlace, PlaceType # Add when created

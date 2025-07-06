@@ -34,6 +34,15 @@ async def create_place(
         )
     return result
 
+@router.get("/all", response_model=List[PlaceResponse])
+async def list_all_places(
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Retrieve all places without any filters.
+    """
+    places = await place_crud.get_all(db=db)
+    return [PlaceResponse.model_validate(p) for p in places]
 
 @router.get("", response_model=PaginatedResponse[PlaceResponse])
 async def list_places(

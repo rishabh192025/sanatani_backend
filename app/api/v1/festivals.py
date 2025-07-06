@@ -7,15 +7,15 @@ from uuid import UUID as PyUUID
 
 from app.crud.festival import festival_crud
 from app.schemas.festival import FestivalCreate, FestivalUpdate, FestivalResponse
-from app.schemas.pagination import PaginatedResponse # Import your pagination schema
+from app.schemas.pagination import PaginatedResponse
 from app.database import get_async_db
+
 from app.dependencies import get_current_user, get_current_active_admin # Ensure these are defined in your dependencies
 from app.models.user import User # For type hinting
 
 router = APIRouter()
-FESTIVAL_TAG = "Hindu Festivals"
 
-@router.post("", response_model=FestivalResponse, status_code=status.HTTP_201_CREATED, tags=[FESTIVAL_TAG])
+@router.post("", response_model=FestivalResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_festival(
     festival_in: FestivalCreate,
     db: AsyncSession = Depends(get_async_db),
@@ -55,7 +55,7 @@ async def create_new_festival(
     return festival
 
 
-@router.get("", response_model=PaginatedResponse[FestivalResponse], tags=[FESTIVAL_TAG])
+@router.get("", response_model=PaginatedResponse[FestivalResponse])
 async def list_all_festivals(
     request: Request, # For pagination URLs
     skip: int = Query(0, ge=0),
@@ -90,7 +90,7 @@ async def list_all_festivals(
     )
 
 
-@router.get("/{festival_id}", response_model=FestivalResponse, tags=[FESTIVAL_TAG])
+@router.get("/{festival_id}", response_model=FestivalResponse)
 async def get_single_festival(
     festival_id: PyUUID, 
     current_user: User = Depends(get_current_user), # Ensure user is authenticated
@@ -103,7 +103,7 @@ async def get_single_festival(
     return festival
 
 
-@router.put("/{festival_id}", response_model=FestivalResponse, tags=[FESTIVAL_TAG])
+@router.put("/{festival_id}", response_model=FestivalResponse)
 async def update_existing_festival(
     festival_id: PyUUID,
     festival_in: FestivalUpdate,
@@ -126,7 +126,7 @@ async def update_existing_festival(
     return updated_festival
 
 
-@router.delete("/{festival_id}", status_code=status.HTTP_204_NO_CONTENT, tags=[FESTIVAL_TAG])
+@router.delete("/{festival_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_existing_festival(
     festival_id: PyUUID, 
     db: AsyncSession = Depends(get_async_db),

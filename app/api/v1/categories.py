@@ -9,7 +9,9 @@ from app.schemas.category import CategoryCreate, CategoryResponse, CategoryUpdat
 from app.schemas.pagination import PaginatedResponse
 from app.crud.category import category_crud
 from app.models.category import CategoryScopeType, Category
+
 from app.models.user import User
+
 router = APIRouter()
 
 CATEGORY_TAG = "Categories"

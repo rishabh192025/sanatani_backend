@@ -7,7 +7,6 @@ from app.config import settings
 from app.database import get_async_db
 from app.crud.user import user_crud
 
-# Import Svix for webhook verification if Clerk uses Svix
 from svix.webhooks import Webhook, WebhookVerificationError
 
 router = APIRouter()

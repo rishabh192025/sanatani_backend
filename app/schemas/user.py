@@ -43,6 +43,7 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
+    role : Optional[str] = None
 
     class Config:
         from_attributes = True # Replaces orm_mode in Pydantic v2

@@ -2,8 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-# ... other necessary imports ...
-from app.schemas.teaching import TeachingCreate, TeachingUpdate, TeachingResponse # Use specific teaching schemas
+from app.schemas.teaching import TeachingCreate, TeachingUpdate, TeachingResponse
 from app.schemas.pagination import PaginatedResponse
 from app.crud.teaching import teaching_crud
 from app.models.user import User, UserRole
@@ -51,8 +50,7 @@ async def list_all_teachings_api(
     current_user: User = Depends(get_current_user), # Use specific dependency
     db: AsyncSession = Depends(get_async_db)
 ):
-    final_status_str = status_filter if status_filter else ContentStatus.PUBLISHED.value
-
+    final_status_str = status_filter #if status_filter else ContentStatus.PUBLISHED.value
     teaching_models, total_count = await teaching_crud.get_teachings_list_and_count(
         db, skip=skip, limit=limit, content_type_str=content_type, status_str=final_status_str,
         category_id_str=category_id, language_str=language, search_query=search

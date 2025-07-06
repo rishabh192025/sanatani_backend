@@ -10,6 +10,7 @@ class ContentResponse(BaseModel):
     slug: str
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
+    sub_type: Optional[str] = None # Assuming this is a string representation of an enum
     content_type: str # Assuming this is a string representation of an enum
     status: str # Assuming this is a string representation of an enum
     created_at: datetime

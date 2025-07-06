@@ -23,6 +23,13 @@ from .temple import TempleBase, TempleCreate, TempleUpdate, TempleResponse
 from .pagination import PaginatedResponse
 
 #from .collection import CollectionBase, CollectionCreate, CollectionUpdate, CollectionItemBase, CollectionItemCreate, CollectionItemUpdate, CollectionItemResponse
-from .pilgrimage_route import PilgrimageRouteBase, PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageRouteResponse
+from .pilgrimage_route import (
+    PilgrimageRouteBase, PilgrimageRouteCreate, PilgrimagePlace,
+    PilgrimageRouteUpdate, PilgrimageRouteResponse, PilgrimageRouteResponseWithStops
+)
 from .festival import FestivalBase, FestivalCreate, FestivalUpdate, FestivalResponse
-
+from .contact_submission import (
+    ContactSubmissionCreate,
+    ContactSubmissionResponse, ContactSubmissionUpdateAdmin, ResolverInfo
+)
+from .chat_with_guruji import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse

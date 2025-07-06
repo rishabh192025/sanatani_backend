@@ -9,14 +9,13 @@ from app.schemas.book import BookCreate, BookResponse, BookUpdate
 from app.crud.book import book_crud
 from app.dependencies import get_current_user, get_current_active_moderator_or_admin, get_current_active_admin
 from app.models.user import User
-from app.models.content import Content, ContentStatus, ContentType, ContentSubType # For type hinting
-from app.services.file_service import file_service
-from app.models.content import BookType as ModelBookTypeEnum # For mapping back in response
+from app.models.content import Content, ContentStatus, ContentType, ContentSubType
+from app.models.content import BookType as ModelBookTypeEnum
 from app.models.content import ContentType as ModelContentTypeEnum
-from app.crud.book_chapter import book_chapter_crud # New
-from app.crud.book_section import book_section_crud # New
+from app.crud.book_chapter import book_chapter_crud
+from app.crud.book_section import book_section_crud 
 from app.schemas.book_chapter import (
-    BookChapterCreate, # Using specific if you keep them separate
+    BookChapterCreate,
     BookChapterResponse,
     BookChapterUpdate, BookChapterResponseWithoutSections
 
@@ -552,49 +551,72 @@ async def delete_book_section_route(
     return
 
 @router.get(
-    "/{book_id}/toc", 
+    "/{book_id_or_slug}/toc", # Use a unique name for clarity, e.g., book_id_or_slug
     response_model=BookTableOfContentsResponse
 )
 async def get_book_table_of_contents_route(
-    book_id: PyUUID,
+    book_id_or_slug: str, # Allow fetching by slug as well
     current_user: User = Depends(get_current_user), # Use current_user for user context
     db: AsyncSession = Depends(get_async_db)
 ):
     """
-    Get the table of contents for a book: a list of chapters with their sections (IDs and titles).
+    Get the table of contents for a book.
+    For AUDIO books, it includes audio_url for each chapter.
+    For TEXT books, it includes nested sections for each chapter.
     """
-    book_with_structure = await book_crud.get_book_table_of_contents(db=db, book_id=book_id)
+    # --- MODIFICATION: Fetch by slug or ID ---
+    book_with_structure: Optional[Content] = None
+    try:
+        book_uuid = PyUUID(book_id_or_slug)
+        book_with_structure = await book_crud.get_book_table_of_contents(db=db, book_id=book_uuid)
+    except ValueError:
+        # Assuming you add a get_by_slug_with_chapters to your CRUD
+        # For now, let's assume get_book_table_of_contents can handle this, or you add a new method
+        # Let's mock a new CRUD method for clarity:
+        book_with_structure = await book_crud.get_book_toc_by_slug(db=db, slug=book_id_or_slug)
+
 
     if not book_with_structure:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
 
-    # Manually construct the TOC response to ensure only desired fields
-    # Pydantic schemas TOCChapterItem and TOCSectionItem will handle this if mapping correctly
+    # --- CORE LOGIC MODIFICATION ---
+    # Determine the book's format to build the correct response
+    book_format = ModelContentTypeEnum(book_with_structure.content_type)
     
     toc_chapters = []
-    if book_with_structure.chapters: # Check if chapters were loaded and exist
+    if book_with_structure.chapters:
         for chapter_model in sorted(book_with_structure.chapters, key=lambda c: c.chapter_number):
-            toc_sections = []
-            if chapter_model.sections: # Check if sections were loaded and exist
-                for section_model in sorted(chapter_model.sections, key=lambda s: s.section_order):
-                    toc_sections.append(
-                        TOCSectionItem(
-                            id=section_model.id,
-                            title=section_model.title,
-                            section_order=section_model.section_order
-                        )
-                    )
-            toc_chapters.append(
-                TOCChapterItem(
-                    id=chapter_model.id,
-                    title=chapter_model.title,
-                    chapter_number=chapter_model.chapter_number,
-                    sections=toc_sections
-                )
-            )
             
+            # Initialize chapter data
+            chapter_data = {
+                "id": chapter_model.id,
+                "title": chapter_model.title,
+                "chapter_number": chapter_model.chapter_number
+            }
+
+            # Populate format-specific data
+            if book_format == ModelContentTypeEnum.AUDIO:
+                # For audio books, add the audio_url
+                chapter_data["audio_url"] = chapter_model.audio_url
+                chapter_data["sections"] = [] # Audiobooks don't have text sections in this model
+            
+            elif book_format == ModelContentTypeEnum.BOOK: # This is your 'TEXT' book
+                # For text books, populate the sections
+                toc_sections = []
+                if chapter_model.sections:
+                    for section_model in sorted(chapter_model.sections, key=lambda s: s.section_order):
+                        toc_sections.append(
+                            TOCSectionItem.model_validate(section_model)
+                        )
+                chapter_data["sections"] = toc_sections
+
+            # Create the Pydantic model from the constructed dictionary
+            toc_chapters.append(TOCChapterItem(**chapter_data))
+            
+    # Construct the final response, now including the cover_image_url
     return BookTableOfContentsResponse(
         book_id=book_with_structure.id,
         book_title=book_with_structure.title,
+        cover_image_url=book_with_structure.cover_image_url, # Add the cover image
         chapters=toc_chapters
     )

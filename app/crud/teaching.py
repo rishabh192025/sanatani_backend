@@ -96,6 +96,11 @@ class CRUDTeaching(CRUDBase[Content, TeachingCreate, TeachingUpdate]): # Typed w
         print(f"Retrieved {len(items)} items with total count {total_count} from the database.")
         return items, total_count
 
+    async def get_teachings_count(self, db: AsyncSession) -> int:
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.TEACHING.value)
+        total_result = await db.execute(count_query)
+        return total_result.scalar_one()
+
     async def update_teaching(
         self, db: AsyncSession, *, db_obj: Content, obj_in: TeachingUpdate
     ) -> Content:

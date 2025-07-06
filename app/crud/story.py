@@ -94,8 +94,11 @@ class CRUDStory(CRUDBase[Content, StoryCreate, StoryUpdate]): # Typed with Story
         
         return items, total_count
 
-    # update method can be inherited from CRUDBase, but ensure ContentUpdate schema is used
-    # or create a specific update_story method.
+    async def get_stories_count(self, db: AsyncSession) -> int:
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.STORY.value)
+        total_result = await db.execute(count_query)
+        return total_result.scalar_one()
+        
     async def update_story(
         self, db: AsyncSession, *, db_obj: Content, obj_in: StoryUpdate
     ) -> Content:

@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession # Changed
 from fastapi import HTTPException, status
 from uuid import UUID
 
-from app.crud.user import user_crud
-from app.schemas.auth import UserLogin
+from app.crud import user_crud, book_crud, teaching_crud, place_crud, temple_crud, festival_crud, story_crud
+from app.schemas.auth import UserLogin, OverviewResponse
 from app.schemas.user import UserCreate, AdminCreate # For registration
 from app.utils.security import verify_password, create_access_token, create_refresh_token
 from app.models.user import User
@@ -43,5 +43,23 @@ class AuthService:
         
         user = await user_crud.create_admin_user(db, obj_in=user_in)
         return user
+    
+    async def get_overview(self, db: AsyncSession) -> dict[str, int]:
+        """
+        Fetch count of the books, audiobooks, teachings, places, temples, festivals, and stories.
+        Returns:
+            dict: A dictionary containing the counts of each category.
+        """
+        overview_data = OverviewResponse(
+            books= await book_crud.get_books_count(db=db, content_type="BOOK"), # Assuming db is passed as None for global count
+            audiobooks= await book_crud.get_books_count(db=db, content_type="AUDIO"),
+            teachings= await teaching_crud.get_teachings_count(db=db),
+            places= await place_crud.get_places_count(db=db),
+            temples= await temple_crud.get_temples_count(db=db),
+            festivals= await festival_crud.get_festivals_count(db=db),
+            stories= await story_crud.get_stories_count(db=db),
+        )
+
+        return overview_data.model_dump()  # Convert Pydantic model to dict
 
 auth_service = AuthService()

@@ -27,7 +27,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
     async def get_book(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
         query = select(self.model).filter(self.model.id == content_id)
         # Use .value to convert enum to string if Content.content_type stores string values in DB
-        query = query.where(Content.sub_type == ContentTypeEnum.BOOK.value)  # If book_type=TEXT
+        query = query.where(Content.sub_type == ContentTypeEnum.BOOK.value)  # If book_format=TEXT
         # query = query.where(Content.sub_type == ContentSubType.BOOK.value)  # This is good for your plan
         # For audio books, it would be:
         # query = query.where(Content.content_type == ContentTypeEnum.AUDIO.value)
@@ -43,23 +43,23 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         author_id: PyUUID
     ) -> Content:
         slug = await generate_slug(db, self.model, obj_in.title)
-        content_data = obj_in.model_dump(exclude={"category_id", "book_type"})
+        content_data = obj_in.model_dump(exclude={"category_id", "book_format"})
 
-        # Convert book_type string to enum safely (case insensitive)
+        # Convert book_format string to enum safely (case insensitive)
         try:
-            book_type_enum = BookType(obj_in.book_type)
+            book_format_enum = BookType(obj_in.book_format)
         except Exception:
-            book_type_enum = BookType.TEXT  # default fallback
-        print(f"Book type enum: {obj_in.book_type}")
-        print(book_type_enum)
-        # Set content_type based on book_type
-        if book_type_enum == BookType.AUDIO:
+            book_format_enum = BookType.TEXT  # default fallback
+        print(f"Book type enum: {obj_in.book_format}")
+        print(book_format_enum)
+        # Set content_type based on book_format
+        if book_format_enum == BookType.AUDIO:
             determined_content_type = ContentTypeEnum.AUDIO.value
-        elif book_type_enum == BookType.PDF:
+        elif book_format_enum == BookType.PDF:
             # Assuming you want a new enum value for PDFs; create or reuse
             # For example:
             determined_content_type = ContentTypeEnum.PDF.value  # <-- make sure this exists
-        elif book_type_enum == BookType.VIDEO:
+        elif book_format_enum == BookType.VIDEO:
             determined_content_type = ContentTypeEnum.VIDEO.value
         else:
             # Default to text book
@@ -91,7 +91,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         *,
         skip: int = 0,
         limit: int = 10,
-        # book_type_filter: Optional[BookType] = None,  # New filter based on BookType
+        # book_format_filter: Optional[BookType] = None,  # New filter based on BookType
         category_id_str: Optional[str] = None,
         language_str: Optional[str] = None,
         status_str: Optional[str] = None,
@@ -100,10 +100,10 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         query = select(Content)
         query = query.where(Content.sub_type == ContentSubType.BOOK.value)  # Core filter for all books
 
-        # if book_type_filter:
-        #     if book_type_filter == BookType.TEXT:
+        # if book_format_filter:
+        #     if book_format_filter == BookType.TEXT:
         #         query = query.where(Content.content_type == ContentTypeEnum.BOOK.value)
-        #     elif book_type_filter == BookType.AUDIO:
+        #     elif book_format_filter == BookType.AUDIO:
         #         query = query.where(Content.content_type == ContentTypeEnum.AUDIO.value)
 
         if category_id_str:
@@ -161,11 +161,25 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
 
         # Apply common filters to both queries
         filters = [Content.sub_type == ContentSubType.BOOK.value] # Core filter for all books
-
-        if content_type_filter_str:
+        print(f"Content type filter: {content_type_filter_str}")
+        if content_type_filter_str == ContentTypeEnum.AUDIO.value:
             try:
                 ct_enum_val = ContentTypeEnum[content_type_filter_str.upper()].value
                 filters.append(Content.content_type == ct_enum_val)
+            except KeyError:
+                # Handle invalid content_type, maybe raise error or ignore
+                pass
+        elif content_type_filter_str == ContentTypeEnum.PDF.value:
+            try:
+                ct_enum_val = ContentTypeEnum[content_type_filter_str.upper()].value
+                filters.append(Content.content_type == ct_enum_val)
+            except KeyError:
+                # Handle invalid content_type, maybe raise error or ignore
+                pass
+        else:
+            try:
+                ct_enum_val = ContentTypeEnum[content_type_filter_str.upper()].value
+                filters.append(Content.content_type != ContentTypeEnum.AUDIO.value)
             except KeyError:
                 # Handle invalid content_type, maybe raise error or ignore
                 pass 
@@ -204,8 +218,55 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         data_query = data_query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
         data_result = await db.execute(data_query)
         items = data_result.scalars().all()
-        
+        print(total_count, items)
         return items, total_count
+    
+    async def get_books_count(
+        self, 
+        db: AsyncSession,
+        *, 
+        content_type: Optional[str] = None,
+        category_id_str: Optional[str] = None,
+        language_str: Optional[str] = None,
+        status_str: Optional[str] = None,
+        search_query: Optional[str] = None
+    ) -> int:
+        query = select(func.count(Content.id)).select_from(Content)
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value)
+        # Apply filters
+        filters = []
+        if content_type:
+            try:
+                ct_enum_val = ContentTypeEnum[content_type.upper()].value
+                filters.append(Content.content_type == ct_enum_val)
+            except KeyError:
+                pass
+        if category_id_str:
+            try:
+                cat_uuid = PyUUID(category_id_str)
+                filters.append(Content.category_id == cat_uuid)
+            except ValueError:
+                pass
+        if language_str:
+            try:
+                lang_enum_val = LanguageCodeEnum[language_str.upper()].value
+                filters.append(Content.language == lang_enum_val)
+            except KeyError:
+                pass
+        if status_str:
+            try:
+                status_enum_val = ContentStatus[status_str.upper()].value
+                filters.append(Content.status == status_enum_val)
+            except KeyError:
+                pass
+        if search_query:
+            search_term = f"%{search_query}%"
+            filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
+        if filters:
+            query = query.where(*filters)
+        result = await db.execute(query)
+        return result.scalar_one()
+
 
     async def get_book_by_slug(
         self, 

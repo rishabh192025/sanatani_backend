@@ -2,13 +2,16 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
-
-from app.crud import pilgrimage_route_crud
+from app.crud import pilgrimage_route_crud, place_crud
 from app.dependencies import get_current_active_admin, get_current_user
-from app.schemas import PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageRouteResponse, PaginatedResponse
+from app.schemas import (
+  PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimageRouteResponse, 
+  PaginatedResponse, PilgrimageRouteResponseWithStops, PilgrimagePlace
+)
 from app.database import get_async_db
 from app.schemas.pilgrimage_route import DifficultyType, DurationType
 from app.models.user import User  # Ensure User model is imported for type hinting
+
 
 router = APIRouter()
 
@@ -45,7 +48,9 @@ async def create_pilgrimage_route(
 @router.get("", response_model=PaginatedResponse[PilgrimageRouteResponse])
 async def list_all_pilgrimage_routes(
     request: Request,  # Add this to build next/prev URLs
-    name: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),            # changed name to search to match UI
+    difficulty_level: Optional[DifficultyType] = Query(None),
+    estimated_duration: Optional[DurationType] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_user),  # Use specific dependency
@@ -53,11 +58,12 @@ async def list_all_pilgrimage_routes(
 ):
     """
     Retrieve all PilgrimageRoutes if no filters are added else returns the filtered ones.
-    As of now only from admin side search by name filtered is applied, if required any for user side will add.
     """
     routes, total_count = await pilgrimage_route_crud.get_filtered_with_count(
         db=db,
-        name=name,
+        search=search,
+        difficulty_level=difficulty_level,
+        estimated_duration=estimated_duration,
         skip=skip,
         limit=limit,
     )
@@ -100,7 +106,7 @@ async def list_all_duration_types(
     return [key.value for key in DurationType]
 
 
-@router.get("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponse)
+@router.get("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponseWithStops)
 async def get_pilgrimage_route(
     pilgrimage_route_id: UUID, 
     current_user: User = Depends(get_current_user),  # Use specific dependency
@@ -115,7 +121,13 @@ async def get_pilgrimage_route(
     await db.commit()       # Commit to make it permanent
     await db.refresh(pilgrimage_route)     # Refresh to re-fetch any auto-updated fields (optional)
 
-    return pilgrimage_route
+    
+    places = await place_crud.get_by_ids(db=db, ids=pilgrimage_route.route_path)
+    pilgrimage_route_response = PilgrimageRouteResponseWithStops.model_validate(pilgrimage_route)
+    pilgrimage_route_response.stops = [
+        PilgrimagePlace.model_validate(place) for place in places
+    ]
+    return pilgrimage_route_response
 
 
 @router.put("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponse)

@@ -30,10 +30,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     async def update_user(
         self, db: AsyncSession, *, db_obj: User, obj_in: UserUpdate
     ) -> User:
-        update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
-        
-        if "password" in update_data: # Should not be there for Clerk users
-            del update_data["password"]
+
+        # Example: if password needs to be updated, it should be handled separately
+        # and not directly through CRUDBase.update if obj_in contains plain password
+        update_data = obj_in.model_dump(exclude_unset=True)
+        update_data["role"] = obj_in.role.value if obj_in.role is not None else db_obj.role.value # Ensure role is set correctly
+        if "password" in update_data: # This should not happen if UserUpdate doesn't have password
+            del update_data["password"] # Or raise error
 
         # Handle role update specifically
         if "role" in update_data and update_data["role"] is not None:

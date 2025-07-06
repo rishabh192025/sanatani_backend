@@ -8,6 +8,7 @@ from typing import Optional, List, Tuple
 from app.models import PilgrimageRoute
 from app.schemas import PilgrimageRouteCreate, PilgrimageRouteUpdate
 from app.crud.base import CRUDBase
+from app.schemas.pilgrimage_route import DifficultyType, DurationType
 from app.utils.helpers import generate_slug
 
 
@@ -40,13 +41,19 @@ class CRUDPilgrimageRoute(CRUDBase[PilgrimageRoute, PilgrimageRouteCreate, Pilgr
     async def get_filtered_with_count(
         self,
         db: AsyncSession,
-        name: Optional[str] = None,
+        search: Optional[str] = None,
+        difficulty_level: Optional[DifficultyType] = None,
+        estimated_duration: Optional[DurationType] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[PilgrimageRoute], int]:
         filters = []
-        if name:
-            filters.append(func.lower(self.model.name).ilike(f"%{name.lower()}%"))
+        if search is not None:
+            filters.append(func.lower(self.model.name).ilike(f"%{search.lower()}%"))
+        if difficulty_level is not None:
+            filters.append(self.model.difficulty_level == difficulty_level.value)
+        if estimated_duration is not None:
+            filters.append(self.model.estimated_duration == estimated_duration.value)
 
         count_query = select(func.count(self.model.id)).where(*filters)
         total_result = await db.execute(count_query)

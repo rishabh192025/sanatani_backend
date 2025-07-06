@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from app.schemas.story import StoryCreate, StoryUpdate, StoryResponse # Use specific story schemas
+from app.schemas.story import StoryCreate, StoryUpdate, StoryResponse
+
 from app.schemas.pagination import PaginatedResponse
 from app.crud.story import story_crud
 from app.models.user import User

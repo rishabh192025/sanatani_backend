@@ -5,6 +5,11 @@ from uuid import UUID
 from datetime import datetime
 from app.models.content import LanguageCode, ContentStatus, ContentType as ModelContentTypeEnum 
 
+class TeachingDetails(BaseModel):
+    about: Optional[str] = None
+    key_concepts: Optional[List[str]] = Field(None, description="A list of key concepts discussed.")
+    benefits: Optional[List[str]] = Field(None, description="A list of benefits for the practitioner.")
+
 # Base for common teaching fields
 class TeachingBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=300)
@@ -13,6 +18,7 @@ class TeachingBase(BaseModel):
     tags: Optional[List[str]] = Field(None, max_items=20)
     cover_image_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    details: Optional[TeachingDetails] = None
 
 class TeachingCreate(TeachingBase):
     content_type: ModelContentTypeEnum = ModelContentTypeEnum.ARTICLE 
@@ -49,8 +55,8 @@ class TeachingResponse(TeachingBase): # Inherits fields from TeachingBase
     #sub_type: str    # Will be TEACHING
     
     file_url: Optional[str] = None     
-    duration: Optional[int] = None     
-
+    duration: Optional[int] = None
+    view_count: Optional[int] = None
     author_id: Optional[UUID] = None
     author_name: Optional[str] = None
     category_id: Optional[UUID] = None # Or str
