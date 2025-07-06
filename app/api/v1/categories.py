@@ -44,7 +44,6 @@ async def list_categories_by_type(
     parent_id: Optional[str] = Query(None, description="Filter by parent category ID to get children. If not provided, lists top-level categories for the type."),
     #skip: int = Query(0, ge=0),
     #limit: int = Query(25, ge=1, le=100),
-    is_active: Optional[bool] = Query(True, description="Filter by active status"),
     #load_children_in_list: bool = Query(False, alias="loadChildren", description="Set to true to load direct children for each category in the list"),
     db: AsyncSession = Depends(get_async_db)
 ):
@@ -61,7 +60,6 @@ async def list_categories_by_type(
         parent_id=parent_uuid,
         #skip=skip, 
         #limit=limit,
-        is_active=is_active,
         #load_children=load_children_in_list # Use the query param
     )
     response_items = []

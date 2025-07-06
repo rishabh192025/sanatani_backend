@@ -32,7 +32,7 @@ class CRUDCollection(CRUDBase[Collection, CollectionCreate, CollectionUpdate]):
     async def get_collection_by_slug(
         self, db: AsyncSession, slug: str, load_items_with_content: bool = False
     ) -> Optional[Collection]:
-        query = select(self.model).filter(self.model.slug == slug)
+        query = select(self.model).filter(self.model.slug == slug).filter(self.model.is_deleted.is_(False))
         if load_items_with_content:
             query = query.options(
                 selectinload(self.model.items).options( # Load items
@@ -45,7 +45,7 @@ class CRUDCollection(CRUDBase[Collection, CollectionCreate, CollectionUpdate]):
     async def get_collection_by_id( # Renamed from get_collection for clarity
         self, db: AsyncSession, collection_id: UUID, load_items_with_content: bool = False
     ) -> Optional[Collection]:
-        query = select(self.model).filter(self.model.id == collection_id)
+        query = select(self.model).filter(self.model.id == collection_id).filter(self.model.is_deleted.is_(False))
         if load_items_with_content:
             query = query.options(
                 selectinload(self.model.items).options(
@@ -71,8 +71,8 @@ class CRUDCollection(CRUDBase[Collection, CollectionCreate, CollectionUpdate]):
         # if curator_id is not None:
         #     filters.append(self.model.curator_id == curator_id)
 
-        count_query = select(func.count(self.model.id)).select_from(self.model)
-        data_query = select(self.model)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.is_deleted.is_(False))
+        data_query = select(self.model).where(self.model.is_deleted.is_(False))
 
         if filters:
             count_query = count_query.where(*filters)
@@ -111,6 +111,7 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
             max_sort_order_result = await db.execute(
                 select(func.max(CollectionItem.sort_order))
                 .filter(CollectionItem.collection_id == collection_id)
+                .filter(CollectionItem.is_deleted.is_(False))
             )
             max_sort_order = max_sort_order_result.scalar_one_or_none()
             obj_in.sort_order = (max_sort_order + 1) if max_sort_order is not None else 0
@@ -136,7 +137,7 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
     ) -> Optional[CollectionItem]:
         result = await db.execute(
             select(self.model).filter(
-                and_(self.model.collection_id == collection_id, self.model.content_id == content_id)
+                and_(self.model.collection_id == collection_id, self.model.content_id == content_id, self.model.is_deleted.is_(False))
             )
         )
         return result.scalar_one_or_none()
@@ -144,7 +145,7 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
     async def get_collection_item_by_id( # Get specific item by its own ID
         self, db: AsyncSession, item_id: UUID, load_content: bool = True
     ) -> Optional[CollectionItem]:
-        query = select(self.model).filter(self.model.id == item_id)
+        query = select(self.model).filter(self.model.id == item_id).filter(self.model.is_deleted.is_(False))
         if load_content:
             query = query.options(joinedload(CollectionItem.content))
         result = await db.execute(query)
@@ -155,8 +156,10 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
     ) -> Optional[CollectionItem]:
         item = await self.get_collection_item_by_id(db, item_id=item_id, load_content=False) # Don't need content to delete
         if item:
-            await db.delete(item)
+            item.is_deleted = True
             await db.commit()
+            await db.refresh(item)  # Refresh to re-fetch any auto-updated fields (optional)
+
             return item # Return the deleted item (or just its ID)
         return None
 
@@ -194,6 +197,7 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
             select(func.count(self.model.id))
             .select_from(self.model)
             .filter(self.model.collection_id == collection_id)
+            .filter(self.model.is_deleted.is_(False))
         )
         total_count_result = await db.execute(count_query)
         total_count = total_count_result.scalar_one()
@@ -202,6 +206,7 @@ class CRUDCollectionItem(CRUDBase[CollectionItem, CollectionItemCreate, Collecti
         data_query = (
             select(self.model)
             .filter(self.model.collection_id == collection_id)
+            .filter(self.model.is_deleted.is_(False))
             .order_by(self.model.sort_order, self.model.created_at) # Sort by order, then by creation
             .offset(skip)
             .limit(limit)

@@ -13,7 +13,6 @@ class TempleBase(BaseModel):
     architecture: Optional[str] = None
     cover_image: Optional[List[str]] = None
     is_featured: Optional[bool] = False
-    is_active: Optional[bool] = True
 
 
 class TempleCreate(TempleBase):

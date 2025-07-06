@@ -26,7 +26,6 @@ class FestivalBase(BaseModel):
     # category_id: Optional[UUID] = None
     images: Optional[List[HttpUrl]] = None # Validate as URLs
     is_major_festival: Optional[bool] = False
-    is_active: Optional[bool] = True
 
 class FestivalCreate(FestivalBase):
     pass # created_by_id will be handled by the API from the current user
@@ -53,7 +52,6 @@ class FestivalUpdate(BaseModel): # More granular updates
     # category_id: Optional[UUID] = None
     images: Optional[List[HttpUrl]] = None
     is_major_festival: Optional[bool] = None
-    is_active: Optional[bool] = None
 
 
 class FestivalResponse(FestivalBase):

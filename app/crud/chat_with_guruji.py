@@ -23,7 +23,7 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
 
 
     async def get_by_chat_id(self, db: AsyncSession, chat_id: str) -> Optional[ChatWithGuruji]:
-        result = await db.execute(select(self.model).where(self.model.chat_id == chat_id))
+        result = await db.execute(select(self.model).where(self.model.chat_id == chat_id), self.model.is_deleted.is_(False))
         return result.scalar_one_or_none()
 
 
@@ -35,11 +35,11 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
     ) -> Tuple[List[ChatWithGuruji], int]:
         filters = []
 
-        count_query = select(func.count(self.model.id)).where(*filters)
+        count_query = select(func.count(self.model.id)).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters,self.model.is_deleted.is_(False)).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(data_query)
         items = result.scalars().all()
 
@@ -49,8 +49,10 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
         # For async, db.get is not directly available, so we fetch first
         obj = await self.get_by_chat_id(db, chat_id=chat_id)
         if obj:
-            await db.delete(obj)
+            obj.is_deleted = True
             await db.commit()
+            await db.refresh(obj)  # Refresh to re-fetch any auto-updated fields (optional)
+
         return obj
 
 

@@ -37,7 +37,7 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         return db_obj
 
     async def get_category_by_slug(self, db: AsyncSession, *, slug: str) -> Optional[Category]:
-        result = await db.execute(select(Category).filter(Category.slug == slug))
+        result = await db.execute(select(Category).filter(Category.slug == slug)).filter(Category.is_deleted.is_(False))
         return result.scalar_one_or_none()
 
     async def get_categories_by_type( # Assuming 'scope' is your 'type'
@@ -49,7 +49,6 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
         #limit: int = 100,
         parent_id: Optional[PyUUID] = None,
         #load_children: bool = False, # Defaulting to True for this example to fix the error
-        is_active: Optional[bool] = True
     ) -> Tuple[List[Category], int]:
         
         # Build filters
@@ -58,18 +57,16 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
             filters.append(Category.parent_id == parent_id)
         # If parent_id is None, it correctly fetches top-level categories for that scope.
 
-        if is_active is not None:
-            filters.append(Category.is_active == is_active)
         
         # Count query
-        count_query = select(func.count(Category.id)).select_from(Category)
+        count_query = select(func.count(Category.id)).select_from(Category).where(Category.is_deleted.is_(False))
         if filters:
             count_query = count_query.where(*filters)
         total_count_result = await db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
         # Data query
-        data_query = select(Category)
+        data_query = select(Category).where(Category.is_deleted.is_(False))
         if filters:
             data_query = data_query.where(*filters)
         
@@ -93,6 +90,7 @@ class CRUDCategory(CRUDBase[Category, CategoryCreate, CategoryUpdate]):
                 # .selectinload(Category.children).selectinload(Category.children) # For 2 levels
             )
             .filter(Category.id == category_id)
+            .filter(Category.is_deleted.is_(False))
         )
         return result.scalar_one_or_none()
         

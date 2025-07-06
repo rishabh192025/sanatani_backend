@@ -1,6 +1,6 @@
 # app/models/contact_submission.py
 
-from sqlalchemy import Column, String, Text, DateTime, Enum as SQLAlchemyEnum, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, Enum as SQLAlchemyEnum, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
@@ -24,7 +24,7 @@ class ContactSubmission(Base):
     email = Column(String(255), nullable=False, index=True)
     subject = Column(String(500), nullable=False)
     message = Column(Text, nullable=False)
-    
+    is_deleted = Column(Boolean, default=False, nullable=True)
     # Admin-facing fields
     status = Column(
         String(50), 

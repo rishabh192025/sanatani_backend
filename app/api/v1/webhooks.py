@@ -64,7 +64,7 @@ async def handle_clerk_webhooks(
             user_to_delete = await user_crud.get_user_by_clerk_id(db, clerk_user_id=clerk_user_id)
             if user_to_delete:
                 # Decide: soft delete (is_active=False) or hard delete
-                user_to_delete.is_active = False 
+                user_to_delete.is_deleted = True
                 db.add(user_to_delete)
                 await db.commit()
                 # await user_crud.remove(db, id=user_to_delete.id) # For hard delete

@@ -25,7 +25,7 @@ class Temple(Base):
     architecture = Column(Text, nullable=True)
     cover_image = Column(JSON, nullable=True)
     is_featured = Column(Boolean, nullable=True)
-    is_active = Column(Boolean, default=True)               # soft delete flag
+    is_deleted = Column(Boolean, default=False, nullable=True)
     visit_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

@@ -27,10 +27,8 @@ class LostHeritageBase(BaseModel):
 
     thumbnail_image: Optional[List[str]] = None
 
-    is_active: Optional[bool] = True
     is_featured: Optional[bool] = False
     is_published: Optional[bool] = False
-
 
 class LostHeritageCreate(LostHeritageBase):
     title: str

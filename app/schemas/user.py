@@ -10,7 +10,6 @@ class UserBase(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=100)
     first_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
-    is_active: Optional[bool] = True
     is_verified: Optional[bool] = False
     preferred_language: Optional[str] = LanguageCode.EN.value
 

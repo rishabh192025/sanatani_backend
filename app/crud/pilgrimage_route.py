@@ -34,7 +34,11 @@ class CRUDPilgrimageRoute(CRUDBase[PilgrimageRoute, PilgrimageRouteCreate, Pilgr
 
     # As of now allowing duplicate names, not using this
     async def get_by_name(self, db: AsyncSession, name: str) -> Optional[PilgrimageRoute]:
-        result = await db.execute(select(self.model).where(self.model.name == name))
+        result = await db.execute(select(self.model).where(
+                self.model.name == name,
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalar_one_or_none()
 
 
@@ -55,11 +59,11 @@ class CRUDPilgrimageRoute(CRUDBase[PilgrimageRoute, PilgrimageRouteCreate, Pilgr
         if estimated_duration is not None:
             filters.append(self.model.estimated_duration == estimated_duration.value)
 
-        count_query = select(func.count(self.model.id)).where(*filters)
+        count_query = select(func.count(self.model.id)).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).offset(skip).limit(limit)
+        data_query = (select(self.model).where(*filters, self.model.is_deleted.is_(False)).offset(skip).limit(limit))
         result = await db.execute(data_query)
         items = result.scalars().all()
 

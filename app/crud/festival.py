@@ -65,7 +65,7 @@ class CRUDFestival(CRUDBase[Festival, FestivalCreate, FestivalUpdate]):
         return db_obj
 
     async def get_by_name(self, db: AsyncSession, *, name: str) -> Optional[Festival]:
-        result = await db.execute(select(self.model).filter(self.model.name == name))
+        result = await db.execute(select(self.model).filter(self.model.name == name)).filter(self.model.is_deleted.is_(False))
         return result.scalar_one_or_none()
 
     async def get_festivals_paginated(
@@ -77,12 +77,11 @@ class CRUDFestival(CRUDBase[Festival, FestivalCreate, FestivalUpdate]):
         state_id: Optional[PyUUID] = None,
         # category_id: Optional[PyUUID] = None,
         is_major: Optional[bool] = None,
-        search_query: Optional[str] = None,
-        is_active: Optional[bool] = True # Default to fetching active festivals
+        search_query: Optional[str] = None
     ) -> Tuple[List[Festival], int]:
         
-        count_query = select(func.count(self.model.id)).select_from(self.model)
-        data_query = select(self.model) # .options(selectinload(self.model.state)) # Eager load state
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.is_deleted.is_(False))
+        data_query = select(self.model).where(self.model.is_deleted.is_(False)) # .options(selectinload(self.model.state)) # Eager load state
 
         filters = []
         if state_id is not None:
@@ -100,8 +99,6 @@ class CRUDFestival(CRUDBase[Festival, FestivalCreate, FestivalUpdate]):
                     # Add other searchable fields if needed
                 )
             )
-        if is_active is not None:
-            filters.append(self.model.is_active == is_active)
 
         if filters:
             count_query = count_query.where(*filters)
@@ -122,7 +119,7 @@ class CRUDFestival(CRUDBase[Festival, FestivalCreate, FestivalUpdate]):
         state_id: Optional[PyUUID] = None, 
         is_major: Optional[bool] = None
     ) -> int:
-        count_query = select(func.count(self.model.id)).select_from(self.model)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.is_deleted.is_(False))
         filters = []
         if state_id is not None:
             filters.append(self.model.state_id == state_id)

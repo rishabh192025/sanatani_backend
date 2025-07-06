@@ -70,7 +70,7 @@ async def refresh_access_token(
             raise credentials_exception
         
         user = await user_crud.get_user(db, user_id=user_id) # Fetch user to ensure they still exist/active
-        if not user or not user.is_active:
+        if not user or user.is_deleted:
             raise credentials_exception
             
         new_access_token = create_access_token(data={"sub": user_id})

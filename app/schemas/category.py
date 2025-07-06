@@ -12,7 +12,6 @@ class CategoryBase(BaseModel):
     color_code: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
     type: str = CategoryScopeType.BOOK.value
     parent_id: Optional[str] = None
-    is_active: bool = True
     is_featured: bool = False
 
 class CategoryCreate(CategoryBase):
@@ -25,7 +24,6 @@ class CategoryUpdate(BaseModel):
     color_code: Optional[str] = Field(None, pattern=r"^#[0-9a-fA-F]{6}$")
     type: Optional[str] = None 
     parent_id: Optional[str] = None
-    is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
 
 class CategoryResponse(CategoryBase): # Inherit from CategoryBase to get most fields

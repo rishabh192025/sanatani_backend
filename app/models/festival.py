@@ -47,7 +47,7 @@ class Festival(Base):
     
     images = Column(JSON, nullable=True) # List of image URLs
     is_major_festival = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True) # For soft delete or deactivating entries
+    is_deleted = Column(Boolean, default=False, nullable=True)
 
     # Timestamps & User
     created_at = Column(DateTime, default=func.now(), nullable=False)
