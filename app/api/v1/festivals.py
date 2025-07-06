@@ -63,12 +63,11 @@ async def list_all_festivals(
     # category_id: Optional[PyUUID] = Query(None, description="Filter by Category ID"),
     is_major: Optional[bool] = Query(None, description="Filter by major festivals"),
     search: Optional[str] = Query(None, description="Search by name or description"),
-    is_active: Optional[bool] = Query(True, description="Filter by active status (defaults to True)"),
     db: AsyncSession = Depends(get_async_db),
 ):
     festivals, total_count = await festival_crud.get_festivals_paginated(
         db=db, skip=skip, limit=limit, state_id=state_id, # category_id=category_id,
-        is_major=is_major, search_query=search, is_active=is_active
+        is_major=is_major, search_query=search
     )
 
     # Construct pagination URLs
@@ -94,7 +93,7 @@ async def get_single_festival(
     db: AsyncSession = Depends(get_async_db)
 ):
     festival = await festival_crud.get(db=db, id=festival_id) # CRUDBase get
-    if not festival or not festival.is_active: # Also check if active for public view
+    if not festival or festival.is_deleted: # Also check if active for public view
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Festival not found or not active")
     # await db.refresh(festival, attribute_names=['state']) # If you want to include state details
     return festival
@@ -138,7 +137,7 @@ async def delete_existing_festival(
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions to delete this festival")
     
     # Soft delete:
-    # db_festival.is_active = False
+    # db_festival.is_deleted = True
     # db.add(db_festival)
     # await db.commit()
     # OR Hard delete:

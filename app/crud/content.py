@@ -20,12 +20,12 @@ from sqlalchemy.orm import selectinload
 
 class ContentCRUD(CRUDBase[Content, BookCreate, BookUpdate]):
     async def get_content(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
-        query = select(self.model).filter(self.model.id == content_id)
+        query = select(self.model).filter(self.model.id == content_id).filter(self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
     async def get_content_by_slug(self, db: AsyncSession, slug: str) -> Optional[Content]:
-        query = select(self.model).filter(self.model.slug == slug)
+        query = select(self.model).filter(self.model.slug == slug).filter(self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 

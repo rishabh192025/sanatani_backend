@@ -20,17 +20,29 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     async def get(self, db: AsyncSession, id: Union[PyUUID, int, str]) -> Optional[ModelType]:
-        result = await db.execute(select(self.model).filter(self.model.id == id))
+        result = await db.execute(
+                select(self.model)
+                .filter(self.model.id == id)
+                .filter(self.model.is_deleted.is_(False))
+        )
         return result.scalar_one_or_none()
 
     async def get_multi(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
-        result = await db.execute(select(self.model).offset(skip).limit(limit))
+        result = await db.execute(
+            select(self.model)
+            .filter(self.model.is_deleted.is_(False))
+            .offset(skip)
+            .limit(limit)
+        )
         return result.scalars().all()
     
     async def get_count(self, db: AsyncSession) -> int:
-        result = await db.execute(select(func.count()).select_from(self.model))
+        result = await db.execute(
+            select(func.count(self.model.id))
+            .filter(self.model.is_deleted.is_(False))
+        )
         return result.scalar_one()
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
@@ -68,8 +80,11 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         # For async, db.get is not directly available, so we fetch first
         obj = await self.get(db, id=id)
         if obj:
-            await db.delete(obj)
+            obj.is_deleted = True
+            # await db.delete(obj)
             await db.commit()
+            await db.refresh(obj)  # Refresh to re-fetch any auto-updated fields (optional)
+
         return obj
 
     async def get_book_table_of_contents(self, db: AsyncSession, book_id: PyUUID) -> Optional[Content]:
@@ -85,6 +100,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
             .filter(self.model.id == book_id)
             .filter(self.model.sub_type == ContentSubType.BOOK.value) # Ensure it's a book
+            .filter(self.model.is_deleted.is_(False))
         )
         book = result.scalar_one_or_none()
         # The relationships (chapters and their sections) will be loaded.

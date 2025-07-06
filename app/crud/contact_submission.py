@@ -44,7 +44,7 @@ class CRUDContactSubmission(CRUDBase[ContactSubmission, ContactSubmissionCreate,
             )
 
         # Count query
-        count_query = select(func.count(self.model.id)).select_from(self.model)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.is_deleted.is_(False))
         if filters:
             count_query = count_query.where(*filters)
         
@@ -52,7 +52,7 @@ class CRUDContactSubmission(CRUDBase[ContactSubmission, ContactSubmissionCreate,
         total_count = total_count_result.scalar_one()
 
         # Data query
-        data_query = select(self.model).order_by(self.model.created_at.desc())
+        data_query = select(self.model).where(self.model.is_deleted.is_(False)).order_by(self.model.created_at.desc())
         if filters:
             data_query = data_query.where(*filters)
         

@@ -44,6 +44,7 @@ class CRUDStory(CRUDBase[Content, StoryCreate, StoryUpdate]): # Typed with Story
             select(self.model) # self.model is Content
             .filter(self.model.id == story_id)
             .filter(self.model.sub_type == ContentSubType.STORY.value)
+            .filter(self.model.is_deleted.is_(False))
             # Optionally, also filter by content_type if stories can ONLY be articles
             # .filter(self.model.content_type == ModelContentTypeEnum.ARTICLE.value) 
         )
@@ -54,6 +55,7 @@ class CRUDStory(CRUDBase[Content, StoryCreate, StoryUpdate]): # Typed with Story
             select(self.model)
             .filter(self.model.slug == slug)
             .filter(self.model.sub_type == ContentSubType.STORY.value)
+            .filter(self.model.is_deleted.is_(False))
             # .filter(self.model.content_type == ModelContentTypeEnum.ARTICLE.value)
         )
         return result.scalar_one_or_none()
@@ -84,18 +86,18 @@ class CRUDStory(CRUDBase[Content, StoryCreate, StoryUpdate]): # Typed with Story
             filters.append(or_(self.model.title.ilike(term), self.model.description.ilike(term)))
 
 
-        count_query = select(func.count(self.model.id)).select_from(self.model).where(*filters)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters, self.model.is_deleted.is_(False)).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         items_result = await db.execute(data_query)
         items = items_result.scalars().all()
         
         return items, total_count
 
     async def get_stories_count(self, db: AsyncSession) -> int:
-        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.STORY.value)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.STORY.value, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         return total_result.scalar_one()
         

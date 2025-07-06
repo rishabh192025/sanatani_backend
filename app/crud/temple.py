@@ -22,7 +22,12 @@ class CRUDTemple(CRUDBase[Temple, TempleCreate, TempleUpdate]):
 
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Optional[Temple]:
-        result = await db.execute(select(self.model).where(self.model.name == name))
+        result = await db.execute(
+            select(self.model).where(
+                self.model.name == name,
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalar_one_or_none()
 
 
@@ -36,18 +41,18 @@ class CRUDTemple(CRUDBase[Temple, TempleCreate, TempleUpdate]):
                 filters.append(func.lower(self.model.name).ilike(f"%{name.lower()}%"))
             except KeyError: pass
 
-        count_query = select(func.count(self.model.id)).where(*filters)
+        count_query = select(func.count(self.model.id)).where(*filters,self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters,self.model.is_deleted.is_(False)).offset(skip).limit(limit)
         result = await db.execute(data_query)
         items = result.scalars().all()
 
         return items, total_count
 
     async def get_temples_count(self, db: AsyncSession) -> int:
-        count_query = select(func.count(self.model.id))
+        count_query = select(func.count(self.model.id)).where(self.model.is_deleted.is_(False))
         result = await db.execute(count_query)
         return result.scalar_one()
         

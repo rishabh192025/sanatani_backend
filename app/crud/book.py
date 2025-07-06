@@ -27,7 +27,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
     async def get_book(self, db: AsyncSession, content_id: PyUUID) -> Optional[Content]:
         query = select(self.model).filter(self.model.id == content_id)
         # Use .value to convert enum to string if Content.content_type stores string values in DB
-        query = query.where(Content.sub_type == ContentTypeEnum.BOOK.value)  # If book_format=TEXT
+        query = query.where(Content.sub_type == ContentTypeEnum.BOOK.value, self.model.is_deleted.is_(False))  # If book_format=TEXT
         # query = query.where(Content.sub_type == ContentSubType.BOOK.value)  # This is good for your plan
         # For audio books, it would be:
         # query = query.where(Content.content_type == ContentTypeEnum.AUDIO.value)
@@ -98,7 +98,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         search_query: Optional[str] = None
     ) -> List[Content]:
         query = select(Content)
-        query = query.where(Content.sub_type == ContentSubType.BOOK.value)  # Core filter for all books
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value,self.model.is_deleted.is_(False))  # Core filter for all books
 
         # if book_format_filter:
         #     if book_format_filter == BookType.TEXT:
@@ -207,8 +207,8 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
             filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
 
         if filters:
-            count_query = count_query.where(*filters)
-            data_query = data_query.where(*filters)
+            count_query = count_query.where(*filters, self.model.is_deleted.is_(False))
+            data_query = data_query.where(*filters, self.model.is_deleted.is_(False))
 
         # Get total count
         total_count_result = await db.execute(count_query)
@@ -263,7 +263,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
             search_term = f"%{search_query}%"
             filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
         if filters:
-            query = query.where(*filters)
+            query = query.where(*filters, self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one()
 
@@ -274,7 +274,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         slug: str
     ) -> Optional[Content]:
         query = select(self.model).filter(self.model.slug == slug)
-        query = query.where(Content.sub_type == ContentSubType.BOOK.value)
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value, self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
@@ -288,7 +288,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
             .options(selectinload(self.model.chapters))
             .filter(self.model.id == content_id)
         )
-        query = query.where(Content.sub_type == ContentSubType.BOOK.value)
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value, self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
@@ -302,7 +302,7 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
             .options(selectinload(self.model.chapters))
             .filter(self.model.slug == slug)
         )
-        query = query.where(Content.sub_type == ContentSubType.BOOK.value)
+        query = query.where(Content.sub_type == ContentSubType.BOOK.value, self.model.is_deleted.is_(False))
         result = await db.execute(query)
         return result.scalar_one_or_none()
 

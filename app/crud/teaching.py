@@ -46,6 +46,7 @@ class CRUDTeaching(CRUDBase[Content, TeachingCreate, TeachingUpdate]): # Typed w
             select(self.model)
             .filter(self.model.id == teaching_id)
             .filter(self.model.sub_type == ContentSubType.TEACHING.value)
+            .filter(self.model.is_deleted.is_(False))
         )
         return result.scalar_one_or_none()
 
@@ -54,6 +55,7 @@ class CRUDTeaching(CRUDBase[Content, TeachingCreate, TeachingUpdate]): # Typed w
             select(self.model)
             .filter(self.model.slug == slug)
             .filter(self.model.sub_type == ContentSubType.TEACHING.value)
+            .filter(self.model.is_deleted.is_(False))
         )
         return result.scalar_one_or_none()
 
@@ -86,18 +88,18 @@ class CRUDTeaching(CRUDBase[Content, TeachingCreate, TeachingUpdate]): # Typed w
             filters.append(or_(self.model.title.ilike(term), self.model.description.ilike(term)))
             
         print(f"Filters applied: {filters}")
-        count_query = select(func.count(self.model.id)).select_from(self.model).where(*filters)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters, self.model.is_deleted.is_(False)).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         items_result = await db.execute(data_query)
         items = items_result.scalars().all()
         print(f"Retrieved {len(items)} items with total count {total_count} from the database.")
         return items, total_count
 
     async def get_teachings_count(self, db: AsyncSession) -> int:
-        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.TEACHING.value)
+        count_query = select(func.count(self.model.id)).select_from(self.model).where(self.model.sub_type == ContentSubType.TEACHING.value, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         return total_result.scalar_one()
 

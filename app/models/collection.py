@@ -21,7 +21,8 @@ class Collection(Base):
     cover_image_url = Column(String(500), nullable=True)
     is_public = Column(Boolean, default=True, nullable=False)
     is_featured = Column(Boolean, default=False, index=True)
-    
+    is_deleted = Column(Boolean, default=False, nullable=True)
+
     #curator_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Optional curator
     
     tags = Column(JSON, nullable=True) # Example: ["spirituality", "beginners"]
@@ -52,7 +53,7 @@ class CollectionItem(Base):
     notes = Column(Text, nullable=True) # Curator's notes about this specific item in this collection
     
     added_at = Column(DateTime, default=func.now(), nullable=False)
-
+    is_deleted = Column(Boolean, default=False, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 

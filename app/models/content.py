@@ -77,6 +77,7 @@ class Content(Base):
     narrator = Column(String(200), nullable=True)
     published_at = Column(DateTime, nullable=True)
     featured = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False, nullable=True)
     content = Column(Text, nullable=True)
     premium_content = Column(Boolean, default=False)
     view_count = Column(Integer, default=0)
@@ -144,6 +145,7 @@ class BookChapter(Base):
     summary = Column(Text, nullable=True)
     key_points = Column(JSON, nullable=True) # Array of key points or takeaways
     is_preview_allowed = Column(Boolean, default=False) # Can this chapter be previewed for free?
+    is_deleted = Column(Boolean, default=False, nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     content = relationship("Content", back_populates="chapters")
@@ -173,6 +175,7 @@ class BookSection(Base):
     section_order = Column(Integer, nullable=False, default=0) # For ordering sections within a chapter
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=True)
 
     chapter = relationship("BookChapter", back_populates="sections")
 

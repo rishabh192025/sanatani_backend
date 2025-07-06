@@ -17,6 +17,7 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         result = await db.execute(
             select(func.max(BookSection.section_order))
             .filter(BookSection.chapter_id == chapter_id)
+            .filter(BookSection.is_deleted.is_(False))
         )
         max_order = result.scalar_one_or_none()
         return max_order if max_order is not None else -1 # Start order from 0, so next is max_order + 1
@@ -52,14 +53,14 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         common_filters = [BookSection.chapter_id == chapter_id]
 
         # Count query
-        count_query = select(func.count(BookSection.id)).select_from(BookSection).where(*common_filters)
+        count_query = select(func.count(BookSection.id)).select_from(BookSection).where(*common_filters,BookSection.is_deleted.is_(False))
         total_count_result = await db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
         # Data query
         data_query = (
             select(self.model)
-            .where(*common_filters)
+            .where(*common_filters,self.model.is_deleted.is_(False))
             .order_by(BookSection.section_order)
             .offset(skip)
             .limit(limit)
@@ -68,12 +69,14 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
         items = data_result.scalars().all()
         
         return items, total_count
+
     async def get_sections_for_chapter(
         self, db: AsyncSession, *, chapter_id: UUID, skip: int = 0, limit: int = 100
     ) -> List[BookSection]:
         result = await db.execute(
             select(self.model)
             .filter(BookSection.chapter_id == chapter_id)
+            .filter(BookSection.is_deleted.is_(False))
             .order_by(BookSection.section_order)
             .offset(skip)
             .limit(limit)
@@ -83,7 +86,7 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
     async def get_section_by_id(
         self, db: AsyncSession, *, section_id: UUID, chapter_id: Optional[UUID] = None
     ) -> Optional[BookSection]:
-        query = select(self.model).filter(self.model.id == section_id)
+        query = select(self.model).filter(self.model.id == section_id).filter(BookSection.is_deleted.is_(False))
         if chapter_id:
             query = query.filter(self.model.chapter_id == chapter_id)
         result = await db.execute(query)
@@ -96,7 +99,8 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
             select(self.model).filter(
                 and_(
                     BookSection.chapter_id == chapter_id,
-                    BookSection.section_order == section_order
+                    BookSection.section_order == section_order,
+                    BookSection.is_deleted.is_(False)
                 )
             )
         )

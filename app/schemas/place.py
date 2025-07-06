@@ -26,7 +26,6 @@ class PlaceBase(BaseModel):
 
     cover_image: Optional[str] = None
     gallery_images: Optional[List[str]] = None
-    is_active: Optional[bool] = True
 
 
 class PlaceCreate(PlaceBase):

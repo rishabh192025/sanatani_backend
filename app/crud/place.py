@@ -21,18 +21,35 @@ class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):
 
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Optional[Place]:
-        result = await db.execute(select(self.model).where(self.model.name == name))
+        result = await db.execute(
+            select(self.model).where(
+                self.model.name == name,
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalar_one_or_none()
+
 
     async def get_by_ids(self, db: AsyncSession, ids: List[UUID]) -> List[Place]:
         if not ids:
             return []
-        result = await db.execute(select(self.model).where(self.model.id.in_(ids)))
+        result = await db.execute(
+            select(self.model).where(
+                self.model.id.in_(ids),
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalars().all()
 
+
     async def get_all(self, db: AsyncSession) -> List[Place]:
-        result = await db.execute(select(self.model))
+        result = await db.execute(
+            select(self.model).where(
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalars().all()
+
 
     async def get_filtered_with_count(
             self, db: AsyncSession, *, skip: int = 0, limit: int = 100,
@@ -69,18 +86,19 @@ class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):
                 filters.append(self.model.country_id == country_id)
             except KeyError: pass
 
-        count_query = select(func.count(self.model.id)).where(*filters)
+        count_query = select(func.count(self.model.id)).where(*filters,self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).offset(skip).limit(limit)
+        data_query = (select(self.model).where(*filters,self.model.is_deleted.is_(False)).offset(skip).limit(limit))
         result = await db.execute(data_query)
         items = result.scalars().all()
 
         return items, total_count
 
+
     async def get_places_count(self, db: AsyncSession) -> int:
-        count_query = select(func.count(self.model.id))
+        count_query = select(func.count(self.model.id)).where(self.model.is_deleted.is_(False))
         result = await db.execute(count_query)
         return result.scalar_one()
 

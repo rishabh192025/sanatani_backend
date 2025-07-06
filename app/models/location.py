@@ -13,6 +13,7 @@ class Country(Base):
     __tablename__ = "countries"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False, unique=True)
+    is_deleted = Column(Boolean, default=False, nullable=True)
     regions = relationship("Region", back_populates="country")
     places = relationship("Place", back_populates="country")
 
@@ -22,6 +23,7 @@ class Region(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     country_id = Column(UUID(as_uuid=True), ForeignKey("countries.id"))
+    is_deleted = Column(Boolean, default=False, nullable=True)
     country = relationship("Country", back_populates="regions")
     states = relationship("State", back_populates="region")
     places = relationship("Place", back_populates="region")
@@ -32,6 +34,7 @@ class State(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     region_id = Column(UUID(as_uuid=True), ForeignKey("regions.id"))
+    is_deleted = Column(Boolean, default=False, nullable=True)
     region = relationship("Region", back_populates="states")
     cities = relationship("City", back_populates="state")
     places = relationship("Place", back_populates="state")
@@ -43,5 +46,6 @@ class City(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)       # city names cant be unique as two aurangabad etc.
     state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
+    is_deleted = Column(Boolean, default=False, nullable=True)
     state = relationship("State", back_populates="cities")
     places = relationship("Place", back_populates="city")

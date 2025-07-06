@@ -43,8 +43,7 @@ class Place(Base):
     gallery_images = Column(JSON, nullable=True)  # Array of image URLs
 
     # Status
-    is_active = Column(Boolean, default=True)       # soft delete flag
-
+    is_deleted = Column(Boolean, default=False, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

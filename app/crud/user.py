@@ -19,12 +19,12 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return await super().get(db, id=user_id)
 
     async def get_user_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
-        result = await db.execute(select(User).filter(User.email == email))
+        result = await db.execute(select(User).filter(User.email == email)).filter(self.model.is_deleted.is_(False))
         return result.scalar_one_or_none()
     
     async def get_user_by_username(self, db: AsyncSession, *, username: str) -> Optional[User]:
         if not username: return None
-        result = await db.execute(select(User).filter(User.username == username))
+        result = await db.execute(select(User).filter(User.username == username)).filter(self.model.is_deleted.is_(False))
         return result.scalar_one_or_none()
 
     async def create_user(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
@@ -34,7 +34,6 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             username=obj_in.username,
             first_name=obj_in.first_name,
             last_name=obj_in.last_name,
-            is_active=obj_in.is_active if obj_in.is_active is not None else True,
             is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
             role=UserRole.USER.value,  # Default role, can be changed later
             preferred_language=obj_in.preferred_language
@@ -51,7 +50,6 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             username=obj_in.username,
             first_name=obj_in.first_name,
             last_name=obj_in.last_name,
-            is_active=obj_in.is_active if obj_in.is_active is not None else True,
             is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
             role=UserRole.ADMIN.value,  # Default role, can be changed later
             preferred_language=obj_in.preferred_language
@@ -76,7 +74,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return await super().update(db, db_obj=db_obj, obj_in=update_data)
 
     async def get_user_by_clerk_id(self, db: AsyncSession, *, clerk_user_id: str) -> Optional[User]:
-        result = await db.execute(select(User).filter(User.clerk_user_id == clerk_user_id))
+        result = await db.execute(select(User).filter(User.clerk_user_id == clerk_user_id)).filter(self.model.is_deleted.is_(False))
         return result.scalar_one_or_none()
 
     # This create_user is now primarily for webhook handling or admin creation
@@ -160,7 +158,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
         # Handle potential 'deleted' status from Clerk if it comes in user.updated
         # if clerk_data.get("deleted", False):
-        #    db_user.is_active = False 
+        #    db_user.is_active = False          # soft deleted flag is changed to is_deleted, so change accordingly
         # Or handle user.deleted webhook separately to hard delete or deactivate.
 
         db.add(db_user)

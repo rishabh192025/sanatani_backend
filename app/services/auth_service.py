@@ -16,7 +16,7 @@ class AuthService:
             return None
         if not verify_password(login_data.password, user.hashed_password): # verify_password is sync
             return None
-        if not user.is_active:
+        if user.is_deleted:
             raise HTTPException(status_code=400, detail="User account is inactive.")
         return user
 

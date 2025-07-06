@@ -22,8 +22,8 @@ class ChatWithGuruji(Base):
     source =  Column(String(100), nullable=True)                   # AI model
 
     # Status
-    is_active = Column(Boolean, default=True)       # soft delete flag
     title = Column(String(300), nullable=True)  # Optional title for the chat
+    is_deleted = Column(Boolean, default=False, nullable=True)
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

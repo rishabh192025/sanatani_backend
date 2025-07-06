@@ -21,7 +21,12 @@ class CRUDLostHeritage(CRUDBase[LostHeritage, LostHeritageCreate, LostHeritageUp
         return db_obj
 
     async def get_by_title(self, db: AsyncSession, title: str) -> Optional[LostHeritage]:
-        result = await db.execute(select(self.model).where(self.model.title == title))
+        result = await db.execute(
+            select(self.model).where(
+                self.model.title == title,
+                self.model.is_deleted.is_(False)
+            )
+        )
         return result.scalar_one_or_none()
 
     async def get_filtered_with_count(
@@ -35,11 +40,11 @@ class CRUDLostHeritage(CRUDBase[LostHeritage, LostHeritageCreate, LostHeritageUp
         if title:
             filters.append(func.lower(self.model.title).ilike(f"%{title.lower()}%"))
 
-        count_query = select(func.count(self.model.id)).where(*filters)
+        count_query = select(func.count(self.model.id)).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters).offset(skip).limit(limit)
+        data_query = (select(self.model).where(*filters, self.model.is_deleted.is_(False)).offset(skip).limit(limit))
         result = await db.execute(data_query)
         items = result.scalars().all()
 

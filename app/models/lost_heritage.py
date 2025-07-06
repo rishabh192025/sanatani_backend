@@ -38,7 +38,7 @@ class LostHeritage(Base):
     thumbnail_image = Column(JSON, nullable=True)       # list of images
 
     # Status
-    is_active = Column(Boolean, default=True)       # soft delete flag
+    is_deleted = Column(Boolean, default=False, nullable=True)
     is_featured = Column(Boolean, default=False)
     is_published = Column(Boolean, default=False)       # if false means DRAFT
 

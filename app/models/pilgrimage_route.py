@@ -31,7 +31,7 @@ class PilgrimageRoute(Base):
 
     cover_image = Column(String(500), nullable=True)
     is_featured = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True)               # soft delete flag
+    is_deleted = Column(Boolean, default=False, nullable=True)
     view_count = Column(Integer, default=0)              # view_count of that route
 
     created_at = Column(DateTime, default=func.now())

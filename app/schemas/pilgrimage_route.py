@@ -35,7 +35,6 @@ class PilgrimageRouteBase(BaseModel):
 
     cover_image: Optional[str] = None
     is_featured: Optional[bool] = False
-    is_active: Optional[bool] = True
     view_count: Optional[int] = 0
 
 

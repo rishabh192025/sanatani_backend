@@ -40,9 +40,9 @@ class Category(Base):
     
     parent_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True)
     sort_order = Column(Integer, default=0)
-    is_active = Column(Boolean, default=True, nullable=False) # Usually non-nullable
     is_featured = Column(Boolean, default=False, index=True) # Added for homepage/featured sections
-    
+    is_deleted = Column(Boolean, default=False, nullable=True)
+
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     
