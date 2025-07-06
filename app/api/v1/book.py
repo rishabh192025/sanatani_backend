@@ -75,7 +75,7 @@ async def list_all_books_paginated( # Renamed for clarity
         content_type_filter_str=content_type_filter, # Pass the determined content_type
         category_id_str=category_id,
         language_str=language,
-        status_str=status_filter or ContentStatus.PUBLISHED.value,
+        status_str=status_filter, #or ContentStatus.PUBLISHED.value,
         search_query=search
     )
 
