@@ -63,6 +63,7 @@ class User(Base):
     preferred_language = Column(String(50), default=LanguageCode.EN.value)
     
     role = Column(String(50), default=UserRole.USER.value, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=True)
     is_verified = Column(Boolean, default=False, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)

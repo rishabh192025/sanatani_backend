@@ -3,6 +3,7 @@ from typing import Optional, Union
 from uuid import UUID as PyUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from fastapi import HTTPException
 
 from app.crud.base import CRUDBase
 from app.models.user import User, UserRole
@@ -19,62 +20,57 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return await super().get(db, id=user_id)
 
     async def get_user_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
-        result = await db.execute(select(User).filter(User.email == email)).filter(self.model.is_deleted.is_(False))
+        result = await db.execute(
+            select(User)
+            .filter(User.email == email)
+            .filter(User.is_deleted.is_(False))
+        )
         return result.scalar_one_or_none()
     
     async def get_user_by_username(self, db: AsyncSession, *, username: str) -> Optional[User]:
         if not username: return None
-        result = await db.execute(select(User).filter(User.username == username)).filter(self.model.is_deleted.is_(False))
+        result = await db.execute(
+            select(User)
+            .filter(User.username == username)
+            .filter(User.is_deleted.is_(False))
+        )
         return result.scalar_one_or_none()
 
-    async def create_user(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
-        db_obj = User(
-            email=obj_in.email,
-            hashed_password=get_password_hash(obj_in.password), # Password hashing is sync
-            username=obj_in.username,
-            first_name=obj_in.first_name,
-            last_name=obj_in.last_name,
-            is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
-            role=UserRole.USER.value,  # Default role, can be changed later
-            preferred_language=obj_in.preferred_language
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    async def create_admin_user(self, db: AsyncSession, *, obj_in: AdminCreate) -> User:
-        db_obj = User(
-            email=obj_in.email,
-            hashed_password=get_password_hash(obj_in.password), # Password hashing is sync
-            username=obj_in.username,
-            first_name=obj_in.first_name,
-            last_name=obj_in.last_name,
-            is_verified=obj_in.is_verified if obj_in.is_verified is not None else False,
-            role=UserRole.ADMIN.value,  # Default role, can be changed later
-            preferred_language=obj_in.preferred_language
-        )
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    # update method can be inherited from CRUDBase if standard update is sufficient
-    # If specific logic is needed for user update (e.g., password change), implement here
     async def update_user(
         self, db: AsyncSession, *, db_obj: User, obj_in: UserUpdate
     ) -> User:
+
         # Example: if password needs to be updated, it should be handled separately
         # and not directly through CRUDBase.update if obj_in contains plain password
         update_data = obj_in.model_dump(exclude_unset=True)
         update_data["role"] = obj_in.role.value if obj_in.role is not None else db_obj.role.value # Ensure role is set correctly
         if "password" in update_data: # This should not happen if UserUpdate doesn't have password
             del update_data["password"] # Or raise error
+
+        # Handle role update specifically
+        if "role" in update_data and update_data["role"] is not None:
+            # Ensure the role value is valid (e.g., from your UserRole enum)
+            try:
+                role_value = UserRole(update_data["role"]).value # Validate and get string value
+                setattr(db_obj, "role", role_value)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid role: {update_data['role']}")
+            del update_data["role"] # Remove from dict if handled separately
+
+        # Apply other updates
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
         
-        return await super().update(db, db_obj=db_obj, obj_in=update_data)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
 
     async def get_user_by_clerk_id(self, db: AsyncSession, *, clerk_user_id: str) -> Optional[User]:
-        result = await db.execute(select(User).filter(User.clerk_user_id == clerk_user_id)).filter(self.model.is_deleted.is_(False))
+        result = await db.execute(
+            select(User)
+            .filter(User.clerk_user_id == clerk_user_id)
+            .filter(User.is_deleted.is_(False))
+        )
         return result.scalar_one_or_none()
 
     # This create_user is now primarily for webhook handling or admin creation
@@ -128,7 +124,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             role=UserRole.USER.value, 
             is_active=True, # Assume active from Clerk
             is_verified=primary_email_obj.get("verification", {}).get("status") == "verified" if primary_email_obj else False,
-            email_verified_at=datetime.fromtimestamp(primary_email_obj.get("verification").get("verified_at_server")) if primary_email_obj and primary_email_obj.get("verification", {}).get("status") == "verified" and primary_email_obj.get("verification").get("verified_at_server") else None,
+            email_verified_at=datetime.fromtimestamp(primary_email_obj.get("verification", {}).get("verified_at_server")) if primary_email_obj and primary_email_obj.get("verification", {}).get("status") == "verified" and primary_email_obj.get("verification", {}).get("verified_at_server") else None,
         )
         db.add(db_obj)
         await db.commit()
@@ -158,7 +154,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
         # Handle potential 'deleted' status from Clerk if it comes in user.updated
         # if clerk_data.get("deleted", False):
-        #    db_user.is_active = False          # soft deleted flag is changed to is_deleted, so change accordingly
+        #    db_user.is_active = False 
         # Or handle user.deleted webhook separately to hard delete or deactivate.
 
         db.add(db_user)
