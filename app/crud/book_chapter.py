@@ -131,7 +131,7 @@ class CRUDBookChapter(CRUDBase[BookChapter, BookChapterCreate, BookChapterUpdate
 
     async def remove_chapter(self, db: AsyncSession, *, id: Union[UUID, int, str]) -> Optional[BookChapter]:
         # For async, db.get is not directly available, so we fetch first
-        obj = await self.get(db, id=id)
+        obj = await self.get_chapter_by_id(db, chapter_id=id)
         if obj:
             await db.delete(obj)
             await db.commit()

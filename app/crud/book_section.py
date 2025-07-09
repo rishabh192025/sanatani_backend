@@ -122,7 +122,7 @@ class CRUDBookSection(CRUDBase[BookSection, BookSectionCreate, BookSectionUpdate
 
     async def remove_section(self, db: AsyncSession, *, id: Union[UUID, int, str]) -> Optional[BookSection]:
         # For async, db.get is not directly available, so we fetch first
-        obj = await self.get(db, id=id)
+        obj = await self.get_section_by_id(db, section_id=id)
         if obj:
             await db.delete(obj)
             await db.commit()
