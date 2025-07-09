@@ -11,9 +11,9 @@ from app.models.user import User
 
 router = APIRouter()
 
-@router.get("/admin/me", response_model=UserResponse) # Or just /me if you consolidate
-async def read_admin_me( # Renamed for clarity if you keep separate /me
-    current_admin: User = Depends(get_current_active_admin) # Uses the new get_current_active_admin
+@router.get("/admin/me", response_model=UserResponse)
+async def read_admin_me(
+    current_admin: User = Depends(get_current_active_admin)
 ):
 
     return current_admin

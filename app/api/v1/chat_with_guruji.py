@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import chat_with_guruji_crud
-from ...schemas import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse, PaginatedResponse
-from ...database import get_async_db
+from app.crud import chat_with_guruji_crud
+from app.schemas import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse, PaginatedResponse
+from app.database import get_async_db
 
 
 router = APIRouter()
@@ -37,7 +37,7 @@ async def create_chat(
 
 @router.get("", response_model=PaginatedResponse[ChatWithGurujiResponse])
 async def list_all_chats(
-    request: Request,  # Add this to build next/prev URLs
+    request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
