@@ -2,6 +2,8 @@ from fastapi import Depends, HTTPException, status, Request # Request might not 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID as PyUUID # Not directly used in get_current_user but good for other places
+import jwt
+from jwt.exceptions import JWTError
 
 from app.config import settings # Ensure CLERK_JWKS_URL is in settings
 from app.database import get_async_db
