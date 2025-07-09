@@ -52,6 +52,7 @@ async def list_places(
     category_id: Optional[UUID]= Query(None),
     region_id: Optional[UUID]= Query(None),
     state_id: Optional[UUID]= Query(None),
+    city_id: Optional[UUID]= Query(None),
     country_id: Optional[UUID]= Query(None),
     db: AsyncSession = Depends(get_async_db),
 ):
@@ -64,6 +65,7 @@ async def list_places(
         category_id=category_id,
         region_id=region_id,
         state_id=state_id,
+        city_id=city_id,
         country_id=country_id,
     )
     response_items = [PlaceResponse.model_validate(p) for p in places]
