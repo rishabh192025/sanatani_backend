@@ -58,6 +58,7 @@ class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):
             category_id: Optional[UUID] = None,
             region_id: Optional[UUID] = None,
             state_id: Optional[UUID] = None,
+            city_id: Optional[UUID] = None,
             country_id: Optional[UUID] = None,
     ) -> Tuple[List[Place], int]:
         filters = []
@@ -80,6 +81,10 @@ class CRUDPlace(CRUDBase[Place, PlaceCreate, PlaceUpdate]):
         if state_id is not None:
             try:
                 filters.append(self.model.state_id == state_id)
+            except KeyError: pass
+        if city_id is not None:
+            try:
+                filters.append(self.model.city_id == city_id)
             except KeyError: pass
         if country_id is not None:
             try:
