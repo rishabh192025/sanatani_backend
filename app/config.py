@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: Optional[str] = None       # Backend API Key
     CLERK_PUBLISHABLE_KEY: Optional[str] = None  # Frontend API Key
     CLERK_JWT_ISSUER: Optional[str] = None # e.g., "https://clerk.yourdomain.com" or from Clerk dashboard
-    CLERK_JWKS_URL: Optional[str] = "https://<your-clerk-domain>/.well-known/jwks.json"
+    CLERK_JWKS_URL: Optional[str] = "https://apt-flamingo-7.clerk.accounts.dev/.well-known/jwks.json"
 
     # Webhook secret remains important
     CLERK_WEBHOOK_SECRET: Optional[str] = None
