@@ -82,3 +82,19 @@ async def get_current_active_moderator_or_admin(
             detail="The user doesn't have enough privileges (Moderator or Admin access required)"
         )
     return current_user
+
+async def is_user_admin(
+    user_id: PyUUID,
+    db: AsyncSession = Depends(get_async_db)
+) -> bool:
+    """
+    Check if the current user is an admin.
+    Returns True if admin, False otherwise.
+    """
+    current_user = await user_crud.get_user(db, user_id=user_id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return current_user.role == UserRole.ADMIN.value

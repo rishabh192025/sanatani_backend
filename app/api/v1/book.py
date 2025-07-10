@@ -77,7 +77,8 @@ async def list_all_books_paginated(
         category_id_str=category_id,
         language_str=language,
         status_str=status_filter, #or ContentStatus.PUBLISHED.value,
-        search_query=search
+        search_query=search,
+        user_id=current_user.id # Optional, if you want to filter by user
     )
 
     response_items = []

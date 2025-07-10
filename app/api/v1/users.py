@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
+from app.schemas.pagination import PaginatedResponse
 from app.dependencies import get_async_db, get_current_user, get_current_active_admin
 from app.schemas.user import UserResponse, UserCreate, UserUpdate
 from app.crud.user import user_crud
@@ -42,18 +43,26 @@ async def create_new_user(
     return user
 
 
-@router.get("", response_model=List[UserResponse])
+@router.get("", response_model=PaginatedResponse[UserResponse])
 async def read_all_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
+    search: Optional[str] = Query(None, description="Search users by name or email"),
     current_admin: User = Depends(get_current_active_admin) # Only admins can list all users
 ):
     """
     Retrieve all users. Admin access required.
     """
-    users = await user_crud.get_multi(db, skip=skip, limit=limit)
-    return users
+    users, total_count = await user_crud.get_users_list_and_count(db, skip=skip, limit=limit, search=search)
+    response_items = [UserResponse.model_validate(u) for u in users]
+    return PaginatedResponse(
+        items=response_items,
+        total_count=total_count,
+        limit=limit,
+        skip=skip)
+
+
 
 
 @router.get("/me", response_model=UserResponse)

@@ -17,7 +17,7 @@ from app.models.content import (
 from app.schemas.book import BookCreate, BookUpdate
 from app.utils.helpers import generate_slug  # Assuming a helper for slug
 from sqlalchemy.orm import selectinload
-
+from app.dependencies import is_user_admin  # Assuming a dependency to check if user is admin
 # Assuming BookType enum exists in app.schemas.book
 from app.schemas.book import BookType
 
@@ -95,7 +95,8 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         category_id_str: Optional[str] = None,
         language_str: Optional[str] = None,
         status_str: Optional[str] = None,
-        search_query: Optional[str] = None
+        search_query: Optional[str] = None,
+        user_id: Optional[PyUUID] = None  # Optional filter for user-specific books
     ) -> List[Content]:
         query = select(Content)
         query = query.where(Content.sub_type == ContentSubType.BOOK.value,self.model.is_deleted.is_(False))  # Core filter for all books
@@ -137,6 +138,12 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
                     Content.description.ilike(search_term)
                 )
             )
+        if user_id and await is_user_admin(user_id, db):
+            # If user is admin, show all books
+            pass
+        else:
+            # If user is not admin, filter by their authored books
+            query = query.where(Content.status == ContentStatus.PUBLISHED.value)
 
         query = query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(query)
@@ -152,7 +159,8 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         category_id_str: Optional[str] = None,
         language_str: Optional[str] = None,
         status_str: Optional[str] = None,
-        search_query: Optional[str] = None
+        search_query: Optional[str] = None,
+        user_id: Optional[PyUUID] = None  # Optional filter for user-specific books
     ) -> Tuple[List[Content], int]: # Returns (list_of_books, total_count)
         
         # Base query for filtering
@@ -161,7 +169,6 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
 
         # Apply common filters to both queries
         filters = [Content.sub_type == ContentSubType.BOOK.value] # Core filter for all books
-        print(f"Content type filter: {content_type_filter_str}")
         if content_type_filter_str == ContentTypeEnum.AUDIO.value:
             try:
                 ct_enum_val = ContentTypeEnum[content_type_filter_str.upper()].value
@@ -202,6 +209,12 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
                 filters.append(Content.status == status_enum_val)
             except KeyError:
                 pass
+        elif user_id and await is_user_admin(user_id, db):
+            # If user is admin, show all books
+            pass
+        else:
+            # If user is not admin, filter by their authored books
+            filters.append(Content.status == ContentStatus.PUBLISHED.value)
         if search_query:
             search_term = f"%{search_query}%"
             filters.append(or_(Content.title.ilike(search_term), Content.description.ilike(search_term)))
@@ -218,7 +231,6 @@ class CRUDBook(CRUDBase[Content, BookCreate, BookUpdate]):
         data_query = data_query.order_by(Content.created_at.desc()).offset(skip).limit(limit)
         data_result = await db.execute(data_query)
         items = data_result.scalars().all()
-        print(total_count, items)
         return items, total_count
     
     async def get_books_count(

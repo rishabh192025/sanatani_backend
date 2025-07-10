@@ -4,6 +4,7 @@ from uuid import UUID as PyUUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException
+from sqlalchemy import func, or_
 
 from app.crud.base import CRUDBase
 from app.models.user import User, UserRole
@@ -161,6 +162,45 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         await db.commit()
         await db.refresh(db_user)
         return db_user
+    
+    async def get_users_list_and_count(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: Optional[str] = None
+    ) -> list[User]:
+        query = select(User).filter(User.is_deleted.is_(False)).order_by(User.created_at.desc())
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    User.first_name.ilike(search_term),
+                    User.last_name.ilike(search_term),
+                    User.email.ilike(search_term),
+                    User.username.ilike(search_term)
+                )
+            )
+        # Apply pagination
+        total_count_query = select(func.count(User.id)).filter(User.is_deleted.is_(False))
+        if search:
+            total_count_query = total_count_query.filter(
+                or_(
+                    User.first_name.ilike(search_term),
+                    User.last_name.ilike(search_term),
+                    User.email.ilike(search_term),
+                    User.username.ilike(search_term)
+                )
+            )
+        total_count_result = await db.execute(total_count_query)
+        total_count = total_count_result.scalar_one()
+
+        query = query.offset(skip).limit(limit)
+        result = await db.execute(query)
+        return result.scalars().all(), total_count
+    
 
 
 user_crud = CRUDUser(User)
