@@ -23,7 +23,7 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
 
 
     async def get_by_chat_id(self, db: AsyncSession, chat_id: str) -> Optional[ChatWithGuruji]:
-        result = await db.execute(select(self.model).where(self.model.chat_id == chat_id), self.model.is_deleted.is_(False))
+        result = await db.execute(select(self.model).where(self.model.chat_id == chat_id, self.model.is_deleted.is_(False)))
         return result.scalar_one_or_none()
 
 
