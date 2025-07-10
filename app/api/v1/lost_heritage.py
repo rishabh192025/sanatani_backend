@@ -35,7 +35,7 @@ async def create_lost_heritage(
 @router.get("", response_model=PaginatedResponse[LostHeritageResponse])
 async def list_all_lost_heritages(
     request: Request,  # Add this to build next/prev URLs
-    title: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),             # title changed to search to match the UI
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
@@ -46,7 +46,7 @@ async def list_all_lost_heritages(
     """
     lost_heritages, total_count = await lost_heritage_crud.get_filtered_with_count(
         db=db,
-        title=title,
+        search=search,
         skip=skip,
         limit=limit,
     )

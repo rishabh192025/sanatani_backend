@@ -37,7 +37,7 @@ async def list_all_temples(
     request: Request,  # Add this to build next/prev URLs
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
-    name: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),          # name changed to search to match the UI
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -49,7 +49,7 @@ async def list_all_temples(
         db=db,
         skip=skip,
         limit=limit,
-        name=name,
+        search=search,
     )
     response_items = [TempleResponse.model_validate(p) for p in temples]
     for idx, res in enumerate(response_items):
