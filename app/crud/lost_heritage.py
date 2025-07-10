@@ -32,13 +32,13 @@ class CRUDLostHeritage(CRUDBase[LostHeritage, LostHeritageCreate, LostHeritageUp
     async def get_filtered_with_count(
             self,
             db: AsyncSession,
-            title: Optional[str] = None,
+            search: Optional[str] = None,
             skip: int = 0,
             limit: int = 100,
     ) -> Tuple[List[LostHeritage], int]:
         filters = []
-        if title:
-            filters.append(func.lower(self.model.title).ilike(f"%{title.lower()}%"))
+        if search:
+            filters.append(func.lower(self.model.title).ilike(f"%{search.lower()}%"))
 
         count_query = select(func.count(self.model.id)).where(*filters, self.model.is_deleted.is_(False))
         total_result = await db.execute(count_query)

@@ -33,12 +33,12 @@ class CRUDTemple(CRUDBase[Temple, TempleCreate, TempleUpdate]):
 
     async def get_filtered_with_count(
             self, db: AsyncSession, *, skip: int = 0, limit: int = 100,
-            name: Optional[str] = None,
+            search: Optional[str] = None,
     ) -> Tuple[List[Temple], int]:
         filters = []
-        if name is not None:
+        if search is not None:
             try:
-                filters.append(func.lower(self.model.name).ilike(f"%{name.lower()}%"))
+                filters.append(func.lower(self.model.name).ilike(f"%{search.lower()}%"))
             except KeyError: pass
 
         count_query = select(func.count(self.model.id)).where(*filters,self.model.is_deleted.is_(False))
