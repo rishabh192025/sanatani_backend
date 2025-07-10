@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID as PyUUID
 
+from app.dependencies import get_current_active_admin, get_current_user
 from app.database import get_async_db
 from app.dependencies import get_current_active_moderator_or_admin
 from app.models.user import User
@@ -51,7 +52,7 @@ async def submit_contact_form(
 async def list_all_contact_submissions(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin),
+    current_user: User = Depends(get_current_active_admin),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     status_filter: Optional[ContactStatus] = Query(None, description="Filter by submission status"),
@@ -92,7 +93,7 @@ async def list_all_contact_submissions(
 async def get_single_submission(
     submission_id: PyUUID,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     submission = await contact_submission_crud.get(db=db, id=submission_id)
     if not submission:
@@ -109,7 +110,7 @@ async def update_submission(
     submission_id: PyUUID,
     submission_in: ContactSubmissionUpdateAdmin,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     db_submission = await contact_submission_crud.get(db=db, id=submission_id)
     if not db_submission:
@@ -131,7 +132,7 @@ async def update_submission(
 async def delete_submission(
     submission_id: PyUUID,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_active_moderator_or_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     deleted_submission = await contact_submission_crud.delete_submission(db=db, submission_id=submission_id)
     if not deleted_submission:

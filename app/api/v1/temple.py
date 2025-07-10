@@ -3,9 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import temple_crud, place_crud
-from ...schemas import TempleCreate, TempleUpdate, TempleResponse, PaginatedResponse
-from ...database import get_async_db
+from app.dependencies import get_current_user, get_current_active_admin
+from app.models.user import User
+from app.crud import temple_crud, place_crud
+from app.schemas import TempleCreate, TempleUpdate, TempleResponse, PaginatedResponse
+from app.database import get_async_db
 
 
 router = APIRouter()
@@ -14,7 +16,7 @@ router = APIRouter()
 @router.post("", response_model=TempleResponse, status_code=status.HTTP_201_CREATED)
 async def create_temple(
     temple_in: TempleCreate,
-    # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_active_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     # existing = await temple_crud.get_by_name(db, name=temple_in.name)
@@ -26,8 +28,8 @@ async def create_temple(
     result = await temple_crud.create_temple(
         db=db,
         obj_in=temple_in,
-        # created_by = current_user.id,
-        created_by = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
+        created_by = current_user.id,
+        #created_by = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
     )
     return result
 
@@ -37,7 +39,8 @@ async def list_all_temples(
     request: Request,  # Add this to build next/prev URLs
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
-    search: Optional[str] = Query(None),          # name changed to search to match the UI
+    search: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -80,7 +83,11 @@ async def list_all_temples(
 
 
 @router.get("/{temple_id}", response_model=TempleResponse)
-async def get_temple(temple_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def get_temple(
+    temple_id: UUID, 
+    current_user: User = Depends(get_current_user),  
+    db: AsyncSession = Depends(get_async_db)
+):
     temple = await temple_crud.get(db=db, id=temple_id)
     if not temple:
         raise HTTPException(status_code=404, detail="Temple not found")
@@ -102,6 +109,7 @@ async def get_temple(temple_id: UUID, db: AsyncSession = Depends(get_async_db)):
 async def update_temple(
     temple_id: UUID,
     temple_in: TempleUpdate,
+    current_user: User = Depends(get_current_active_admin),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     temple = await temple_crud.get(db=db, id=temple_id)
@@ -111,7 +119,11 @@ async def update_temple(
 
 
 @router.delete("/{temple_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_temple(temple_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def delete_temple(
+    temple_id: UUID, 
+    current_user: User = Depends(get_current_active_admin),  
+    db: AsyncSession = Depends(get_async_db)
+):
     temple = await temple_crud.get(db=db, id=temple_id)
     if not temple:
         raise HTTPException(status_code=404, detail="Temple not found")

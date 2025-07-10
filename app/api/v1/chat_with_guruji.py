@@ -3,9 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import chat_with_guruji_crud
-from ...schemas import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse, PaginatedResponse
-from ...database import get_async_db
+from app.dependencies import get_current_user, get_current_active_admin
+from app.models.user import User
+from app.crud import chat_with_guruji_crud
+from app.schemas import ChatWithGurujiCreate, ChatWithGurujiUpdate, ChatWithGurujiResponse, PaginatedResponse
+from app.database import get_async_db
 
 
 router = APIRouter()
@@ -14,7 +16,7 @@ router = APIRouter()
 @router.post("", response_model=ChatWithGurujiResponse, status_code=status.HTTP_201_CREATED)
 async def create_chat(
     chat_with_guruji_in: ChatWithGurujiCreate,
-    # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_user), # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     existing_chat = await chat_with_guruji_crud.get_by_chat_id(db, chat_id=chat_with_guruji_in.chat_id)
@@ -29,8 +31,8 @@ async def create_chat(
     new_chat = await chat_with_guruji_crud.create_chat_with_guruji(
         db=db,
         obj_in=chat_with_guruji_in,
-        # user_id = current_user.id,
-        user_id = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
+        user_id = current_user.id,
+        #user_id = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
     )
     return new_chat
 
@@ -40,6 +42,7 @@ async def list_all_chats(
     request: Request,  # Add this to build next/prev URLs
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(get_current_user),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -74,7 +77,11 @@ async def list_all_chats(
 
 
 @router.get("/{chat_id}", response_model=ChatWithGurujiResponse)
-async def get_chat_by_id(chat_id: str, db: AsyncSession = Depends(get_async_db)):
+async def get_chat_by_id(
+    chat_id: str,
+    current_user: User = Depends(get_current_user),  
+    db: AsyncSession = Depends(get_async_db)
+):
     chat = await chat_with_guruji_crud.get_by_chat_id(db=db, chat_id=chat_id)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -86,6 +93,7 @@ async def get_chat_by_id(chat_id: str, db: AsyncSession = Depends(get_async_db))
 async def update_chat(
     chat_id: str,
     chat_with_guruji_in: ChatWithGurujiUpdate,
+    current_user: User = Depends(get_current_user),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     chat = await chat_with_guruji_crud.get_by_chat_id(db=db, chat_id=chat_id)
@@ -95,7 +103,11 @@ async def update_chat(
 
 
 @router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_chat(chat_id: str, db: AsyncSession = Depends(get_async_db)):
+async def delete_chat(
+    chat_id: str, 
+    current_user: User = Depends(get_current_user),  
+    db: AsyncSession = Depends(get_async_db)
+):
     chat = await chat_with_guruji_crud.get_by_chat_id(db=db, chat_id=chat_id)
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")

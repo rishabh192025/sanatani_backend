@@ -35,15 +35,16 @@ from app.schemas.pagination import PaginatedResponse
 router = APIRouter()
 
 @router.get("", response_model=PaginatedResponse[BookResponse], summary="List all books with pagination")
-async def list_all_books_paginated( # Renamed for clarity
-    request: Request, # Inject Request to build next/prev page URLs
+async def list_all_books_paginated(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of items to skip (offset)"),
     limit: int = Query(10, ge=1, le=100, description="Number of items per page"),
     category_id: Optional[str] = Query(None, description="Filter by category UUID"),
     language: Optional[str] = Query(None, description="Filter by language code (e.g., EN, HI)"),
     status_filter: Optional[str] = Query(None, description="Filter by content status (e.g., PUBLISHED, DRAFT)"),
     search: Optional[str] = Query(None, description="Search query for title and description"),
-    book_format: Optional[str] = Query("TEXT", description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"), # TEXT, AUDIO, PDF
+    book_format: Optional[str] = Query("TEXT", description=f"Filter by book format: {', '.join([bt.value for bt in ModelBookTypeEnum])}"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     content_type_filter = None
@@ -121,6 +122,7 @@ async def list_all_books_paginated( # Renamed for clarity
 @router.get("/{content_id_or_slug}", response_model=BookResponse)
 async def get_single_book(
     content_id_or_slug: str,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -155,10 +157,10 @@ async def get_single_book(
 
 
 @router.post("",response_model=BookResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_book( # Renamed
-    content_in: BookCreate, # Changed parameter name for clarity
-    #current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
-    db: AsyncSession = Depends(get_async_db) # Changed
+async def create_new_book(
+    content_in: BookCreate,
+    current_user: User = Depends(get_current_active_admin), 
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Create new content. Requires Moderator or Admin role.
@@ -170,18 +172,18 @@ async def create_new_book( # Renamed
     new_content = await book_crud.create_book(
         db=db, 
         obj_in=content_in,
-        #author_id=current_user.id,
-        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+        author_id=current_user.id,
+        #author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
     )
     print(new_content)
     return new_content
 
 @router.put("/{content_id}",response_model=BookResponse)
-async def update_existing_book( # Renamed
-    content_id: PyUUID, # Expect UUID
+async def update_existing_book(
+    content_id: PyUUID,
     content_in: BookUpdate,
-    #current_user: User = Depends(get_current_user), # More granular check below
-    db: AsyncSession = Depends(get_async_db) # Changed
+    current_user: User = Depends(get_current_active_admin),
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Update existing content.
@@ -203,10 +205,10 @@ async def update_existing_book( # Renamed
 
 
 @router.delete("/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_existing_book( # Renamed
-    content_id: PyUUID, # Expect UUID
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
-    db: AsyncSession = Depends(get_async_db) # Changed
+async def delete_existing_book(
+    content_id: PyUUID,
+    current_user: User = Depends(get_current_active_admin),
+    db: AsyncSession = Depends(get_async_db)
 ):
     """
     Delete content. Requires Admin role.
@@ -217,7 +219,7 @@ async def delete_existing_book( # Renamed
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Content not found")
     
     await book_crud.remove(db=db, id=content_id)
-    return # No content response for 204
+    return
 
 
 @router.post(
@@ -228,10 +230,10 @@ async def delete_existing_book( # Renamed
 async def create_chapter_for_book_route(
     book_id: PyUUID,
     chapter_in: BookChapterCreate,
-    #current_user: User = Depends(get_current_user), # Assuming permissions needed
+    current_user: User = Depends(get_current_active_admin), 
     db: AsyncSession = Depends(get_async_db)
 ):
-    book = await book_crud.get_book(db, content_id=book_id) # get_book from CRUDBook
+    book = await book_crud.get_book(db, content_id=book_id)
     if not book:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book not found")
 
@@ -269,6 +271,7 @@ async def get_specific_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     include_sections: bool = Query(True, description="Whether to include sections"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     chapter = await book_chapter_crud.get_chapter_by_id( # Use book_chapter_crud
@@ -292,6 +295,7 @@ async def list_book_chapters_paginated_route(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     include_sections: bool = Query(False, description="Whether to include sections (only applicable for TEXT books)"),
+    current_user: User = Depends(get_current_user), # Optional, depends on your auth flow
     db: AsyncSession = Depends(get_async_db)
 ):
     book = await book_crud.get_book(db, content_id=book_id) # from CRUDBook
@@ -353,7 +357,7 @@ async def update_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     chapter_in: BookChapterUpdate, # Use specific BookChapterUpdate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify chapter exists and belongs to book
@@ -379,7 +383,7 @@ async def update_book_chapter_route(
 async def delete_book_chapter_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -401,7 +405,7 @@ async def create_section_for_book_chapter_route(
     book_id: PyUUID, 
     chapter_id: PyUUID,
     section_in: BookSectionCreate, # Use specific BookSectionCreate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Fetch book to check its content_type
@@ -439,6 +443,7 @@ async def get_specific_book_section_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     section_id: PyUUID,
+    current_user: User = Depends(get_current_user), # Optional, depends on your auth flow
     db: AsyncSession = Depends(get_async_db)
 ):
     section = await book_section_crud.get_section_by_id( # Use book_section_crud
@@ -458,6 +463,7 @@ async def list_book_sections_paginated_route(
     chapter_id: PyUUID,
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(get_current_user), # Optional, depends on your auth flow
     db: AsyncSession = Depends(get_async_db)
 ):
     # Fetch book to check its content_type
@@ -505,16 +511,13 @@ async def update_book_section_route(
     chapter_id: PyUUID,
     section_id: PyUUID,
     section_in: BookSectionUpdate, # Use specific BookSectionUpdate
-    #current_user: User = Depends(get_current_user), # Permissions
+    current_user: User = Depends(get_current_active_admin), # Permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     # Verify section exists and belongs to chapter
     section = await book_section_crud.get_section_by_id(db=db, section_id=section_id, chapter_id=chapter_id)
     if not section:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found or does not belong to this chapter")
-
-    # Permission check (e.g., Admin, Moderator, or Author of the parent book)
-    # ... (implement your permission logic) ...
 
     try:
         updated_section = await book_section_crud.update(
@@ -532,7 +535,7 @@ async def delete_book_section_route(
     book_id: PyUUID,
     chapter_id: PyUUID,
     section_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin), # Only admins can delete
+    current_user: User = Depends(get_current_active_admin), # Only admins can delete
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -551,6 +554,7 @@ async def delete_book_section_route(
 )
 async def get_book_table_of_contents_route(
     book_id_or_slug: str, # Allow fetching by slug as well
+    current_user: User = Depends(get_current_user), # Optional, depends on your auth flow
     db: AsyncSession = Depends(get_async_db)
 ):
     """

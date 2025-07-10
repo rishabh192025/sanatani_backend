@@ -3,14 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import pilgrimage_route_crud, place_crud
-from ...dependencies import get_current_active_admin
-from ...schemas import (
+from app.models.user import User
+from app.crud import pilgrimage_route_crud, place_crud
+from app.dependencies import get_current_active_admin, get_current_user
+from app.schemas import (
     PilgrimageRouteCreate, PilgrimageRouteUpdate, PilgrimagePlace,
     PilgrimageRouteResponse, PaginatedResponse, PilgrimageRouteResponseWithStops
 )
-from ...database import get_async_db
-from ...schemas.pilgrimage_route import DifficultyType, DurationType
+from app.database import get_async_db
+from app.schemas.pilgrimage_route import DifficultyType, DurationType
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ router = APIRouter()
 @router.post("", response_model=PilgrimageRouteResponse, status_code=status.HTTP_201_CREATED)
 async def create_pilgrimage_route(
     pilgrimage_route_in: PilgrimageRouteCreate,
-    #current_user: User = Depends(get_current_active_moderator_or_admin) # Example: Only admins can create
+    current_user: User = Depends(get_current_active_admin), # Example: Only admins can create
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -37,8 +38,8 @@ async def create_pilgrimage_route(
     result = await pilgrimage_route_crud.create_pilgrimage_route(
         db=db,
         obj_in=pilgrimage_route_in,
-        # created_by = current_user.id,
-        created_by = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
+        created_by = current_user.id,
+        #created_by = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
     )
     return result
 
@@ -52,6 +53,7 @@ async def list_all_pilgrimage_routes(
     estimated_duration: Optional[DurationType] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(get_current_user),  # Example: Only admins can list
     db: AsyncSession = Depends(get_async_db),
 ):
     """
@@ -101,7 +103,11 @@ async def list_all_duration_types():
 
 
 @router.get("/{pilgrimage_route_id}", response_model=PilgrimageRouteResponseWithStops)
-async def get_pilgrimage_route(pilgrimage_route_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def get_pilgrimage_route(
+    pilgrimage_route_id: UUID, 
+    current_user: User = Depends(get_current_user),  
+    db: AsyncSession = Depends(get_async_db)
+):
     pilgrimage_route = await pilgrimage_route_crud.get(db=db, id=pilgrimage_route_id)
     if not pilgrimage_route:
         raise HTTPException(status_code=404, detail="PilgrimageRoute not found")
@@ -124,24 +130,22 @@ async def get_pilgrimage_route(pilgrimage_route_id: UUID, db: AsyncSession = Dep
 async def update_pilgrimage_route(
     pilgrimage_route_id: UUID,
     pilgrimage_route_in: PilgrimageRouteUpdate,
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db),
 ):
     pilgrimage_route = await pilgrimage_route_crud.get(db=db, id=pilgrimage_route_id)
     if not pilgrimage_route:
         raise HTTPException(status_code=404, detail="PilgrimageRoute not found")
 
-    # ... (Permission check) ...
-    # is_admin_or_moderator = current_user.role in [UserRole.ADMIN.value, UserRole.MODERATOR.value]
-    # is_author = pilgrimage_route.created_by == current_user.id if pilgrimage_route.created_by else False
-    # if not (is_admin_or_moderator or is_author):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-
     return await pilgrimage_route_crud.update(db=db, db_obj=pilgrimage_route, obj_in=pilgrimage_route_in)
 
 
 @router.delete("/{pilgrimage_route_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_pilgrimage_route(pilgrimage_route_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def delete_pilgrimage_route(
+    pilgrimage_route_id: UUID, 
+    current_user: User = Depends(get_current_active_admin),  
+    db: AsyncSession = Depends(get_async_db)
+):
     pilgrimage_route = await pilgrimage_route_crud.get(db=db, id=pilgrimage_route_id)
     if not pilgrimage_route:
         raise HTTPException(status_code=404, detail="PilgrimageRoute not found")

@@ -4,9 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
 
-from ...crud import place_crud
-from ...schemas import PlaceCreate, PlaceUpdate, PlaceResponse, PaginatedResponse
-from ...database import get_async_db
+from app.dependencies import get_current_user, get_current_active_admin
+from app.models.user import User
+from app.crud import place_crud
+from app.schemas import PlaceCreate, PlaceUpdate, PlaceResponse, PaginatedResponse
+from app.database import get_async_db
 
 router = APIRouter()
 
@@ -15,7 +17,7 @@ router = APIRouter()
 @router.post("", response_model=PlaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_place(
     place_in: PlaceCreate,
-    # current_user: User = Depends(get_current_active_moderator_or_admin), # Use specific dependency
+    current_user: User = Depends(get_current_active_admin), # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     # existing = await place_crud.get_by_name(db, name=place_in.name)
@@ -54,6 +56,7 @@ async def list_places(
     state_id: Optional[UUID]= Query(None),
     city_id: Optional[UUID]= Query(None),
     country_id: Optional[UUID]= Query(None),
+    current_user: User = Depends(get_current_user),  # Example: Only admins can list
     db: AsyncSession = Depends(get_async_db),
 ):
     places, total_count = await place_crud.get_filtered_with_count(
@@ -92,7 +95,11 @@ async def list_places(
 
 
 @router.get("/{place_id}", response_model=PlaceResponse)
-async def get_place(place_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def get_place(
+    place_id: UUID, 
+    current_user: User = Depends(get_current_user),  
+    db: AsyncSession = Depends(get_async_db)
+):
     place = await place_crud.get(db=db, id=place_id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
@@ -103,6 +110,7 @@ async def get_place(place_id: UUID, db: AsyncSession = Depends(get_async_db)):
 async def update_place(
     place_id: UUID,
     place_in: PlaceUpdate,
+    current_user: User = Depends(get_current_active_admin),  # Use specific dependency
     db: AsyncSession = Depends(get_async_db),
 ):
     place = await place_crud.get(db=db, id=place_id)
@@ -112,7 +120,11 @@ async def update_place(
 
 
 @router.delete("/{place_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_place(place_id: UUID, db: AsyncSession = Depends(get_async_db)):
+async def delete_place(
+    place_id: UUID, 
+    current_user: User = Depends(get_current_active_admin),  
+    db: AsyncSession = Depends(get_async_db)
+):
     place = await place_crud.get(db=db, id=place_id)
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")

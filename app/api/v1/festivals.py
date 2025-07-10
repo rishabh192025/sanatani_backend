@@ -5,6 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from uuid import UUID as PyUUID
 
+from app.dependencies import get_current_active_admin
+from app.models.user import User
 from app.crud.festival import festival_crud
 from app.schemas.festival import FestivalCreate, FestivalUpdate, FestivalResponse
 from app.schemas.pagination import PaginatedResponse
@@ -18,7 +20,7 @@ router = APIRouter()
 async def create_new_festival(
     festival_in: FestivalCreate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_user) # Ensure user is authenticated
+    current_user: User = Depends(get_current_active_admin) # Ensure user is authenticated
 ):
     # TODO: Add role-based permission if needed (e.g., only admins/moderators can create)
     # from app.dependencies import get_current_active_moderator_or_admin
@@ -34,8 +36,8 @@ async def create_new_festival(
         festival = await festival_crud.create_festival(
             db=db, 
             obj_in=festival_in, 
-            created_by_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
-            #created_by_id=current_user.id
+            #created_by_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+            created_by_id=current_user.id
         )
     except ValueError as e: # Your pre-check
         print(f"API caught ValueError: {e}") # Log this
@@ -63,6 +65,7 @@ async def list_all_festivals(
     # category_id: Optional[PyUUID] = Query(None, description="Filter by Category ID"),
     is_major: Optional[bool] = Query(None, description="Filter by major festivals"),
     search: Optional[str] = Query(None, description="Search by name or description"),
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user permissions
     db: AsyncSession = Depends(get_async_db),
 ):
     festivals, total_count = await festival_crud.get_festivals_paginated(
@@ -90,6 +93,7 @@ async def list_all_festivals(
 @router.get("/{festival_id}", response_model=FestivalResponse)
 async def get_single_festival(
     festival_id: PyUUID, 
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     festival = await festival_crud.get(db=db, id=festival_id) # CRUDBase get
@@ -104,7 +108,7 @@ async def update_existing_festival(
     festival_id: PyUUID,
     festival_in: FestivalUpdate,
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_user) # Or a more privileged user
+    current_user: User = Depends(get_current_active_admin) # Or a more privileged user
 ):
     db_festival = await festival_crud.get(db=db, id=festival_id)
     if not db_festival:
@@ -126,7 +130,7 @@ async def update_existing_festival(
 async def delete_existing_festival(
     festival_id: PyUUID, 
     db: AsyncSession = Depends(get_async_db),
-    #current_user: User = Depends(get_current_user) # Or get_current_active_admin
+    current_user: User = Depends(get_current_active_admin) # Or get_current_active_admin
 ):
     db_festival = await festival_crud.get(db=db, id=festival_id)
     if not db_festival:

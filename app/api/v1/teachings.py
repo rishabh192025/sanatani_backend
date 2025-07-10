@@ -17,7 +17,7 @@ TEACHING_TAG = "Teachings"
 @router.post("", response_model=TeachingResponse, status_code=status.HTTP_201_CREATED, tags=[TEACHING_TAG])
 async def create_new_teaching_api(
     teaching_in: TeachingCreate, # Using TeachingCreate
-    #current_user: User = Depends(get_current_active_moderator_or_admin),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     # Validate teaching_in.content_type (already done in TeachingCreate if using enum directly)
@@ -32,8 +32,8 @@ async def create_new_teaching_api(
     teaching = await teaching_crud.create_teaching(
         db=db, 
         obj_in=teaching_in,
-        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
-        #author_id=current_user.id
+        #author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+        author_id=current_user.id
         )
     return teaching # Pydantic converts Content model to TeachingResponse
 
@@ -47,6 +47,7 @@ async def list_all_teachings_api(
     category_id: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     final_status_str = status_filter #if status_filter else ContentStatus.PUBLISHED.value
@@ -76,6 +77,7 @@ async def list_all_teachings_api(
 @router.get("/{teaching_id_or_slug}", response_model=TeachingResponse, tags=[TEACHING_TAG])
 async def get_single_teaching_api(
     teaching_id_or_slug: str,
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     teaching_model = None
@@ -93,26 +95,20 @@ async def get_single_teaching_api(
 async def update_existing_teaching_api(
     teaching_id: PyUUID,
     teaching_in: TeachingUpdate, # Using TeachingUpdate
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_teaching = await teaching_crud.get_teaching(db, teaching_id=teaching_id)
     if not db_teaching:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Teaching not found")
-    
-    # ... (Permission check) ...
-    # is_admin_or_moderator = current_user.role in [UserRole.ADMIN.value, UserRole.MODERATOR.value]
-    # is_author = db_teaching.author_id == current_user.id if db_teaching.author_id else False
-    # if not (is_admin_or_moderator or is_author):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-        
+
     updated_teaching = await teaching_crud.update_teaching(db=db, db_obj=db_teaching, obj_in=teaching_in)
     return updated_teaching # Pydantic converts
 
 @router.delete("/{teaching_id}", status_code=status.HTTP_204_NO_CONTENT, tags=[TEACHING_TAG])
 async def delete_existing_teaching_api(
     teaching_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_teaching = await teaching_crud.get_teaching(db, teaching_id=teaching_id)

@@ -19,15 +19,15 @@ STORY_TAG = "Stories"
 
 @router.post("", response_model=StoryResponse, status_code=status.HTTP_201_CREATED, tags=[STORY_TAG])
 async def create_new_story_api(
-    story_in: StoryCreate, # Using StoryCreate
-    #current_user: User = Depends(get_current_active_moderator_or_admin),
+    story_in: StoryCreate,
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     story = await story_crud.create_story(
         db=db, 
         obj_in=story_in, 
-        author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
-        #author_id=current_user.id
+        #author_id="1f3d72a7-f5cf-4200-8300-77c13cad6117"
+        author_id=current_user.id
         )
     return story # Pydantic will convert Content model to StoryResponse
 
@@ -40,6 +40,7 @@ async def list_all_stories_api(
     category_id: Optional[str] = Query(None),
     language: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_async_db)
 ):
     # Default to published if no status_filter is provided for public listing
@@ -76,6 +77,7 @@ async def list_all_stories_api(
 @router.get("/{story_id_or_slug}", response_model=StoryResponse, tags=[STORY_TAG])
 async def get_single_story_api(
     story_id_or_slug: str,
+    current_user: User = Depends(get_current_user), # Optional: if you want to filter by user permissions
     db: AsyncSession = Depends(get_async_db)
 ):
     story_model = None
@@ -97,18 +99,12 @@ async def get_single_story_api(
 async def update_existing_story_api(
     story_id: PyUUID,
     story_in: StoryUpdate, # Using StoryUpdate
-    #current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_story = await story_crud.get_story(db, story_id=story_id)
     if not db_story:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
-    
-    # ... (Permission check) ...
-    # is_admin_or_moderator = current_user.role in [UserRole.ADMIN.value, UserRole.MODERATOR.value]
-    # is_author = db_story.author_id == current_user.id if db_story.author_id else False
-    # if not (is_admin_or_moderator or is_author):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
         
     updated_story = await story_crud.update_story(db=db, db_obj=db_story, obj_in=story_in)
     return updated_story # Pydantic converts
@@ -116,7 +112,7 @@ async def update_existing_story_api(
 @router.delete("/{story_id}", status_code=status.HTTP_204_NO_CONTENT, tags=[STORY_TAG])
 async def delete_existing_story_api(
     story_id: PyUUID,
-    #current_user: User = Depends(get_current_active_admin),
+    current_user: User = Depends(get_current_active_admin),
     db: AsyncSession = Depends(get_async_db)
 ):
     db_story = await story_crud.get_story(db, story_id=story_id)
