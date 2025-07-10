@@ -40,6 +40,7 @@ class StoryResponse(StoryBase): # Inherits fields from StoryBase
     author_id: Optional[UUID] = None
     author_name: Optional[str] = None
     category_id: Optional[UUID] = None # Or str
+    category_name: Optional[str] = None
     status: str
     published_at: Optional[datetime] = None
     featured: bool
