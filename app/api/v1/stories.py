@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+
+from app.crud import category_crud
 from app.schemas.story import StoryCreate, StoryUpdate, StoryResponse
 from app.schemas.pagination import PaginatedResponse
 from app.crud.story import story_crud
@@ -50,6 +52,10 @@ async def list_all_stories_api(
     
     response_items = [StoryResponse.model_validate(story) for story in story_models]
 
+    for idx, res in enumerate(response_items):
+        category = await category_crud.get(db, res.category_id)
+        response_items[idx].category_name = category.name
+
     # ... (pagination next/prev page logic) ...
     next_page, prev_page = None, None # Placeholder
     base_url = str(request.url.remove_query_params(keys=['skip', 'limit']))
@@ -78,10 +84,14 @@ async def get_single_story_api(
         story_model = await story_crud.get_story(db, story_id=story_uuid)
     except ValueError:
         story_model = await story_crud.get_story_by_slug(db, slug=story_id_or_slug)
-    
-    if not story_model:
+
+    res = StoryResponse.model_validate(story_model)
+    category = await category_crud.get(db, story_model.category_id)
+    res.category_name = category.name
+
+    if not res:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Story not found")
-    return story_model # Pydantic converts Content model to StoryResponse
+    return res # Pydantic converts Content model to StoryResponse
 
 @router.put("/{story_id}", response_model=StoryResponse, tags=[STORY_TAG])
 async def update_existing_story_api(
