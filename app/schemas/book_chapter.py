@@ -17,7 +17,7 @@ class BookChapterBase(BaseModel):
 class BookChapterCreate(BookChapterBase):
     pass
 
-class BookChapterUpdate(BaseModel):
+class BookChapterUpdate(BookChapterBase):
     title: Optional[str] = Field(None, min_length=1, max_length=300)
     description: Optional[str] = None # New field
 
