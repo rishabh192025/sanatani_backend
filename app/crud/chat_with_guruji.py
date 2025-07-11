@@ -30,16 +30,22 @@ class CRUDChatWithGuruji(CRUDBase[ChatWithGuruji, ChatWithGurujiCreate, ChatWith
     async def get_filtered_with_count(
         self,
         db: AsyncSession,
+        user_id: Optional[UUID] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[ChatWithGuruji], int]:
-        filters = []
+        filters = [self.model.is_deleted.is_(False)]
 
-        count_query = select(func.count(self.model.id)).where(*filters, self.model.is_deleted.is_(False))
+        if user_id is not None:
+            try:
+                filters.append(self.model.user_id == user_id)
+            except KeyError: pass
+
+        count_query = select(func.count(self.model.id)).where(*filters)
         total_result = await db.execute(count_query)
         total_count = total_result.scalar_one()
 
-        data_query = select(self.model).where(*filters,self.model.is_deleted.is_(False)).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
+        data_query = select(self.model).where(*filters).order_by(self.model.created_at.desc()).offset(skip).limit(limit)
         result = await db.execute(data_query)
         items = result.scalars().all()
 

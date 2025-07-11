@@ -31,8 +31,7 @@ async def create_chat(
     new_chat = await chat_with_guruji_crud.create_chat_with_guruji(
         db=db,
         obj_in=chat_with_guruji_in,
-        user_id = current_user.id,
-        #user_id = "7e6bacf9-69f5-4807-a8e8-9b961b6c1e51"
+        user_id = current_user.id
     )
     return new_chat
 
@@ -50,6 +49,7 @@ async def list_all_chats(
     """
     chats, total_count = await chat_with_guruji_crud.get_filtered_with_count(
         db=db,
+        user_id=current_user.id,
         skip=skip,
         limit=limit,
     )
